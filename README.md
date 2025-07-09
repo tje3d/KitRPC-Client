@@ -13,11 +13,12 @@
 
 - 🔥 **Type-Safe APIs** - End-to-end type safety with tRPC
 - 🎨 **Modern UI** - Beautiful, responsive design with TailwindCSS
-- 🗄️ **Database Ready** - Prisma ORM with SQLite (easily configurable)
+- 🗄️ **Database Ready** - Prisma ORM with MySQL in Docker containers
 - ⚡ **Lightning Fast** - Powered by Bun runtime
 - 🔧 **Developer Experience** - Hot reload, TypeScript, and excellent tooling
 - 📱 **Responsive Design** - Mobile-first approach with modern UX patterns
-- 🛡️ **Production Ready** - Error handling, validation, and best practices
+- 🛡��� **Production Ready** - Error handling, validation, and best practices
+- 🐳 **Docker Ready** - Containerized database and application deployment
 
 ## 🛠️ Tech Stack
 
@@ -36,29 +37,67 @@
 ### Prerequisites
 
 - [Bun](https://bun.sh/) installed on your machine
-- Node.js 18+ (for compatibility)
+- [Docker](https://www.docker.com/) and Docker Compose for database
 
-### Installation
+### Development Setup
 
+1. **Clone and install dependencies**
 ```bash
-# Clone the repository
 git clone <your-repo-url>
 cd kitrpc
-
-# Install dependencies
 bun install
+```
 
-# Set up the database
+2. **Set up environment variables**
+```bash
+# Copy the example environment file
+cp .env.example .env
+# Edit .env with your preferred settings
+```
+
+3. **Start the database**
+```bash
+# Start MySQL database using Docker Compose
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+4. **Set up the database schema**
+```bash
+# Push schema to database
 bun run db:push
 
-# Seed the database (optional)
+# Seed the database with sample data (optional)
 bun run db:seed
+```
 
-# Start the development server
+5. **Start the development server**
+```bash
 bun run dev
 ```
 
 🎉 Open [http://localhost:5173](http://localhost:5173) to see your app!
+
+### Production Setup
+
+1. **Set up environment variables**
+```bash
+# Copy and configure environment file for production
+cp .env.example .env
+# Update DATABASE_URL and other production settings
+```
+
+2. **Deploy with Docker Compose**
+```bash
+# Build and start all services (database + application)
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+The production setup automatically:
+- Runs database migrations (`bunx prisma migrate deploy`)
+- Generates Prisma client (`bunx prisma generate`)
+- Builds and starts the application
+
+🎉 Your app will be available at `http://localhost:3000` (or your configured PORT)!
 
 ## 📁 Project Structure
 
@@ -134,6 +173,10 @@ type Todo = {
 
 ## 🗄️ Database
 
+### Database Setup
+
+This project uses **MySQL** as the database with **Prisma ORM**. The database runs in Docker containers for both development and production environments.
+
 ### Schema
 
 The project uses a simple Todo model to demonstrate database operations:
@@ -150,13 +193,13 @@ model Todo {
 ### Database Commands
 
 ```bash
-# Push schema changes to database
+# Push schema changes to database (development)
 bun run db:push
 
 # Generate Prisma client
-bun run db:generate
+bunx prisma generate
 
-# Run database migrations
+# Run database migrations (development)
 bun run db:migrate
 
 # Reset database
@@ -168,6 +211,14 @@ bun run db:seed
 # Open Prisma Studio
 bun run db:studio
 ```
+
+### Important Notes
+
+- **After schema changes**: You may need to run migrations and seed the database again
+- **Development**: Migrations are run manually using `bun run db:migrate`
+- **Production**: Migrations are automatically applied during deployment via Docker Compose
+- **Seeding**: Run `bun run db:seed` after migrations to populate the database with sample data
+- **Database URL**: Make sure your `.env` file has the correct `DATABASE_URL` pointing to your MySQL instance
 
 ## 🎨 UI Components
 
@@ -214,31 +265,68 @@ bun run db:seed          # Seed database
 
 ### Environment Configuration
 
-Create a `.env` file for environment variables:
+Create a `.env` file based on `.env.example`:
 
 ```env
-# Database
-DATABASE_URL="file:./dev.db"
+# Database Configuration
+DATABASE_URL="mysql://root:rootpassword@localhost:3306/kitrpc"
 
-# Add other environment variables as needed
+# MySQL Configuration
+MYSQL_ROOT_PASSWORD=rootpassword
+MYSQL_DATABASE=kitrpc
+MYSQL_USER=kitrpc_user
+MYSQL_PASSWORD=userpassword
+
+# Application Configuration
+NODE_ENV=development
+PORT=3000
+HOST=0.0.0.0
 ```
+
+**Important**: Update these values for your specific environment, especially for production deployments.
 
 ## 🚀 Deployment
 
-### Build for Production
+### Docker Deployment (Recommended)
+
+The project includes Docker configurations for easy deployment:
 
 ```bash
+# Production deployment with Docker Compose
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+This will:
+- Start MySQL database container
+- Build and start the application container
+- Automatically run migrations and generate Prisma client
+- Serve the application on the configured PORT
+
+### Manual Build for Production
+
+```bash
+# Build the application
 bun run build
+
+# The built application will be in the build/ directory
 ```
 
 ### Deployment Options
 
-- **Vercel** - Zero-config deployment
-- **Netlify** - Static site hosting
-- **Railway** - Full-stack deployment
-- **Docker** - Containerized deployment
+- **Docker** - Containerized deployment (recommended)
+- **Railway** - Full-stack deployment with database
+- **VPS/Cloud** - Deploy using Docker Compose on any server
+- **Kubernetes** - Scale with container orchestration
 
-> 💡 **Tip**: Update the database provider in `prisma/schema.prisma` for production (PostgreSQL, MySQL, etc.)
+### Environment Variables for Production
+
+Make sure to set these environment variables for production:
+
+```env
+NODE_ENV=production
+DATABASE_URL="mysql://user:password@mysql:3306/kitrpc"
+PORT=3000
+```
 
 ## 🤝 Contributing
 
