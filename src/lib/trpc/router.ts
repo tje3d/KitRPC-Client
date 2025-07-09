@@ -1,29 +1,8 @@
+import { prisma } from '$lib/prisma';
 import type { Context } from '$lib/trpc/context';
 import { initTRPC, TRPCError } from '@trpc/server';
 
 export const t = initTRPC.context<Context>().create();
-
-// In-memory storage for todos
-let todos: App.Todo[] = [
-	{
-		id: '1',
-		text: 'Learn SvelteKit',
-		completed: false,
-		createdAt: new Date().toISOString()
-	},
-	{
-		id: '2',
-		text: 'Build a todo app',
-		completed: true,
-		createdAt: new Date().toISOString()
-	},
-	{
-		id: '3',
-		text: 'Deploy to production',
-		completed: false,
-		createdAt: new Date().toISOString()
-	}
-];
 
 export const router = t.router({
 	greeting: t.procedure.query(async () => {
@@ -34,7 +13,22 @@ export const router = t.router({
 	todos: t.router({
 		// Get all todos
 		getAll: t.procedure.query(async () => {
-			return todos.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+			try {
+				const todos = await prisma.todo.findMany({
+					orderBy: {
+						createdAt: 'desc'
+					}
+				});
+				return todos.map((todo) => ({
+					...todo,
+					createdAt: todo.createdAt.toISOString()
+				}));
+			} catch (error) {
+				throw new TRPCError({
+					code: 'INTERNAL_SERVER_ERROR',
+					message: 'Failed to fetch todos'
+				});
+			}
 		}),
 
 		// Add a new todo
@@ -49,14 +43,23 @@ export const router = t.router({
 				return { text: input.text };
 			})
 			.mutation(async ({ input }) => {
-				const newTodo: App.Todo = {
-					id: Date.now().toString(),
-					text: input.text,
-					completed: false,
-					createdAt: new Date().toISOString()
-				};
-				todos.push(newTodo);
-				return newTodo;
+				try {
+					const newTodo = await prisma.todo.create({
+						data: {
+							text: input.text,
+							completed: false
+						}
+					});
+					return {
+						...newTodo,
+						createdAt: newTodo.createdAt.toISOString()
+					};
+				} catch (error) {
+					throw new TRPCError({
+						code: 'INTERNAL_SERVER_ERROR',
+						message: 'Failed to create todo'
+					});
+				}
 			}),
 
 		// Toggle todo completion
@@ -71,15 +74,40 @@ export const router = t.router({
 				return { id: input.id };
 			})
 			.mutation(async ({ input }) => {
-				const todo = todos.find((t) => t.id === input.id);
-				if (!todo) {
+				try {
+					// First, get the current todo
+					const existingTodo = await prisma.todo.findUnique({
+						where: { id: input.id }
+					});
+
+					if (!existingTodo) {
+						throw new TRPCError({
+							code: 'NOT_FOUND',
+							message: 'Todo not found'
+						});
+					}
+
+					// Update the todo
+					const updatedTodo = await prisma.todo.update({
+						where: { id: input.id },
+						data: {
+							completed: !existingTodo.completed
+						}
+					});
+
+					return {
+						...updatedTodo,
+						createdAt: updatedTodo.createdAt.toISOString()
+					};
+				} catch (error) {
+					if (error instanceof TRPCError) {
+						throw error;
+					}
 					throw new TRPCError({
-						code: 'NOT_FOUND',
-						message: 'Todo not found'
+						code: 'INTERNAL_SERVER_ERROR',
+						message: 'Failed to toggle todo'
 					});
 				}
-				todo.completed = !todo.completed;
-				return todo;
 			}),
 
 		// Update todo text
@@ -99,15 +127,30 @@ export const router = t.router({
 				return { id: input.id, text: input.text };
 			})
 			.mutation(async ({ input }) => {
-				const todo = todos.find((t) => t.id === input.id);
-				if (!todo) {
+				try {
+					const updatedTodo = await prisma.todo.update({
+						where: { id: input.id },
+						data: {
+							text: input.text
+						}
+					});
+
+					return {
+						...updatedTodo,
+						createdAt: updatedTodo.createdAt.toISOString()
+					};
+				} catch (error: any) {
+					if (error.code === 'P2025') {
+						throw new TRPCError({
+							code: 'NOT_FOUND',
+							message: 'Todo not found'
+						});
+					}
 					throw new TRPCError({
-						code: 'NOT_FOUND',
-						message: 'Todo not found'
+						code: 'INTERNAL_SERVER_ERROR',
+						message: 'Failed to update todo'
 					});
 				}
-				todo.text = input.text;
-				return todo;
 			}),
 
 		// Delete a todo
@@ -122,15 +165,27 @@ export const router = t.router({
 				return { id: input.id };
 			})
 			.mutation(async ({ input }) => {
-				const index = todos.findIndex((t) => t.id === input.id);
-				if (index === -1) {
+				try {
+					const deletedTodo = await prisma.todo.delete({
+						where: { id: input.id }
+					});
+
+					return {
+						...deletedTodo,
+						createdAt: deletedTodo.createdAt.toISOString()
+					};
+				} catch (error: any) {
+					if (error.code === 'P2025') {
+						throw new TRPCError({
+							code: 'NOT_FOUND',
+							message: 'Todo not found'
+						});
+					}
 					throw new TRPCError({
-						code: 'NOT_FOUND',
-						message: 'Todo not found'
+						code: 'INTERNAL_SERVER_ERROR',
+						message: 'Failed to delete todo'
 					});
 				}
-				const deletedTodo = todos.splice(index, 1)[0];
-				return deletedTodo;
 			})
 	})
 });

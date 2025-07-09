@@ -11,13 +11,20 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
-		"lint": "prettier --check ."
+		"lint": "prettier --check .",
+		"db:push": "bunx prisma db push",
+		"db:studio": "bunx prisma studio",
+		"db:generate": "bunx prisma generate",
+		"db:migrate": "bunx prisma migrate dev",
+		"db:reset": "bunx prisma migrate reset",
+		"db:seed": "bun run prisma/seed.ts"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-node": "^5.2.13",
 		"@sveltejs/kit": "^2.22.3",
 		"@sveltejs/vite-plugin-svelte": "^5.1.0",
 		"@tailwindcss/vite": "^4.1.11",
+		"@types/node": "^24.0.12",
 		"prettier": "^3.6.2",
 		"prettier-plugin-svelte": "^3.4.0",
 		"prettier-plugin-tailwindcss": "^0.6.13",
@@ -28,8 +35,10 @@
 		"vite": "^6.3.5"
 	},
 	"dependencies": {
+		"@prisma/client": "^6.11.1",
 		"@trpc/client": "^10.45.2",
 		"@trpc/server": "^10.45.2",
+		"prisma": "^6.11.1",
 		"rxjs": "^7.8.2",
 		"trpc-sveltekit": "^3.6.3",
 		"zod": "^3.25.76"
