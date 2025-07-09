@@ -17,20 +17,20 @@
 - ⚡ **Lightning Fast** - Powered by Bun runtime
 - 🔧 **Developer Experience** - Hot reload, TypeScript, and excellent tooling
 - 📱 **Responsive Design** - Mobile-first approach with modern UX patterns
-- 🛡��� **Production Ready** - Error handling, validation, and best practices
+- 🛡 **Production Ready** - Error handling, validation, and best practices
 - 🐳 **Docker Ready** - Containerized database and application deployment
 
 ## 🛠️ Tech Stack
 
-| Technology | Purpose | Version |
-|------------|---------|----------|
-| **SvelteKit** | Full-stack framework | ^2.22.3 |
-| **tRPC** | Type-safe APIs | ^10.45.2 |
-| **Prisma** | Database ORM | ^6.11.1 |
-| **TailwindCSS** | Styling | ^4.1.11 |
-| **TypeScript** | Type safety | ^5.8.3 |
-| **Bun** | Runtime & package manager | Latest |
-| **Zod** | Schema validation | ^3.25.76 |
+| Technology      | Purpose                   | Version  |
+| --------------- | ------------------------- | -------- |
+| **SvelteKit**   | Full-stack framework      | ^2.22.3  |
+| **tRPC**        | Type-safe APIs            | ^10.45.2 |
+| **Prisma**      | Database ORM              | ^6.11.1  |
+| **TailwindCSS** | Styling                   | ^4.1.11  |
+| **TypeScript**  | Type safety               | ^5.8.3   |
+| **Bun**         | Runtime & package manager | Latest   |
+| **Zod**         | Schema validation         | ^3.25.76 |
 
 ## 🚀 Quick Start
 
@@ -42,6 +42,7 @@
 ### Development Setup
 
 1. **Clone and install dependencies**
+
 ```bash
 git clone <your-repo-url>
 cd kitrpc
@@ -49,6 +50,7 @@ bun install
 ```
 
 2. **Set up environment variables**
+
 ```bash
 # Copy the example environment file
 cp .env.example .env
@@ -56,12 +58,14 @@ cp .env.example .env
 ```
 
 3. **Start the database**
+
 ```bash
 # Start MySQL database using Docker Compose
 docker-compose -f docker-compose.dev.yml up -d
 ```
 
 4. **Set up the database schema**
+
 ```bash
 # Push schema to database
 bun run db:push
@@ -71,6 +75,7 @@ bun run db:seed
 ```
 
 5. **Start the development server**
+
 ```bash
 bun run dev
 ```
@@ -80,6 +85,7 @@ bun run dev
 ### Production Setup
 
 1. **Set up environment variables**
+
 ```bash
 # Copy and configure environment file for production
 cp .env.example .env
@@ -87,12 +93,14 @@ cp .env.example .env
 ```
 
 2. **Deploy with Docker Compose**
+
 ```bash
 # Build and start all services (database + application)
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
 The production setup automatically:
+
 - Runs database migrations (`bunx prisma migrate deploy`)
 - Generates Prisma client (`bunx prisma generate`)
 - Builds and starts the application
@@ -136,11 +144,11 @@ KitRPC comes with a complete Todo API demonstrating all CRUD operations:
 
 ```typescript
 // Get greeting message
-trpc.greeting.query()
+trpc.greeting.query();
 // Returns: "Hello tRPC v11 @ [timestamp]"
 
 // Get all todos
-trpc.todos.getAll.query()
+trpc.todos.getAll.query();
 // Returns: Todo[]
 ```
 
@@ -148,27 +156,27 @@ trpc.todos.getAll.query()
 
 ```typescript
 // Add new todo
-trpc.todos.add.mutate({ text: "Learn tRPC" })
+trpc.todos.add.mutate({ text: 'Learn tRPC' });
 
 // Toggle todo completion
-trpc.todos.toggle.mutate({ id: "todo-id" })
+trpc.todos.toggle.mutate({ id: 'todo-id' });
 
 // Update todo text
-trpc.todos.update.mutate({ id: "todo-id", text: "Updated text" })
+trpc.todos.update.mutate({ id: 'todo-id', text: 'Updated text' });
 
 // Delete todo
-trpc.todos.delete.mutate({ id: "todo-id" })
+trpc.todos.delete.mutate({ id: 'todo-id' });
 ```
 
 ### Type Definitions
 
 ```typescript
 type Todo = {
-  id: string
-  text: string
-  completed: boolean
-  createdAt: string
-}
+	id: string;
+	text: string;
+	completed: boolean;
+	createdAt: string;
+};
 ```
 
 ## 🗄️ Database
@@ -297,6 +305,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ```
 
 This will:
+
 - Start MySQL database container
 - Build and start the application container
 - Automatically run migrations and generate Prisma client
