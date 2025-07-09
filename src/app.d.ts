@@ -7,6 +7,14 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
+		
+		// Shared types
+		interface Todo {
+			id: string;
+			text: string;
+			completed: boolean;
+			createdAt: string;
+		}
 	}
 }
 

@@ -30,6 +30,8 @@
 	"dependencies": {
 		"@trpc/client": "^10.45.2",
 		"@trpc/server": "^10.45.2",
-		"trpc-sveltekit": "^3.6.3"
+		"rxjs": "^7.8.2",
+		"trpc-sveltekit": "^3.6.3",
+		"zod": "^3.25.76"
 	}
 }
