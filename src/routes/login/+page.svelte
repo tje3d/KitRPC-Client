@@ -6,6 +6,18 @@
 	let error = '';
 	let loading = false;
 
+	const inputClasses =
+		'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none';
+	const toggleButtonClasses = 'rounded-md px-4 py-2 text-sm font-medium transition-colors';
+	const activeToggleClasses = `${toggleButtonClasses} bg-white text-gray-900 shadow-sm`;
+	const inactiveToggleClasses = `${toggleButtonClasses} text-gray-500 hover:text-gray-700`;
+
+	// Toggle button data structure
+	const toggleButtons = [
+		{ label: 'Email', isActive: () => useEmail },
+		{ label: 'Mobile', isActive: () => !useEmail }
+	];
+
 	async function handleLogin() {
 		// ...
 	}
@@ -41,42 +53,33 @@
 				<!-- Login method toggle -->
 				<div class="flex justify-center">
 					<div class="flex rounded-lg bg-gray-100 p-1">
-						<button
-							type="button"
-							on:click={toggleLoginMethod}
-							class="rounded-md px-4 py-2 text-sm font-medium transition-colors {useEmail
-								? 'bg-white text-gray-900 shadow-sm'
-								: 'text-gray-500 hover:text-gray-700'}"
-						>
-							Email
-						</button>
-						<button
-							type="button"
-							on:click={toggleLoginMethod}
-							class="rounded-md px-4 py-2 text-sm font-medium transition-colors {!useEmail
-								? 'bg-white text-gray-900 shadow-sm'
-								: 'text-gray-500 hover:text-gray-700'}"
-						>
-							Mobile
-						</button>
+						{#each toggleButtons as button}
+							<button
+								type="button"
+								on:click={toggleLoginMethod}
+								class={button.isActive() ? activeToggleClasses : inactiveToggleClasses}
+							>
+								{button.label}
+							</button>
+						{/each}
 					</div>
 				</div>
 
 				{#if error}
 					<div class="rounded-md border border-red-200 bg-red-50 p-4">
 						<div class="flex">
-							<div class="flex-shrink-0">
-								<svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-									<path
-										fill-rule="evenodd"
-										d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							</div>
-							<div class="ml-3">
-								<p class="text-sm text-red-800">{error}</p>
-							</div>
+							<svg
+								class="h-5 w-5 flex-shrink-0 text-red-400"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+							<p class="ml-3 text-sm text-red-800">{error}</p>
 						</div>
 					</div>
 				{/if}
@@ -91,7 +94,7 @@
 							autocomplete="email"
 							required
 							bind:value={email}
-							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
+							class={inputClasses}
 							placeholder="Enter your email"
 						/>
 					{:else}
@@ -104,7 +107,7 @@
 							autocomplete="tel"
 							required
 							bind:value={mobile}
-							class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
+							class={inputClasses}
 							placeholder="Enter your mobile number"
 						/>
 					{/if}
@@ -119,7 +122,7 @@
 						autocomplete="current-password"
 						required
 						bind:value={password}
-						class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
+						class={inputClasses}
 						placeholder="Enter your password"
 					/>
 				</div>

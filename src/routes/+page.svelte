@@ -6,6 +6,48 @@
 	import { BehaviorSubject, combineLatest, map, startWith } from 'rxjs';
 	import { onMount } from 'svelte';
 
+	const cardClasses = 'rounded-xl border border-gray-200 bg-white shadow-lg';
+	const errorCardClasses = 'rounded-lg border border-red-200 bg-red-50 p-3';
+	const errorIconClasses = 'h-4 w-4 text-red-400';
+	const errorTextClasses = 'text-sm text-red-700';
+	const errorCloseButtonClasses = 'ml-auto text-red-400 hover:text-red-600';
+	const primaryButtonClasses =
+		'rounded-lg bg-blue-600 px-8 py-3 font-semibold text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg disabled:cursor-not-allowed disabled:bg-gray-400';
+	const inputClasses =
+		'flex-1 rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-lg transition-all outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500';
+	const actionButtonClasses =
+		'rounded-md px-3 py-1 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:bg-gray-400';
+	const editButtonClasses = `${actionButtonClasses} bg-blue-600 hover:bg-blue-700`;
+	const saveButtonClasses = `${actionButtonClasses} bg-green-600 hover:bg-green-700`;
+	const cancelButtonClasses = `${actionButtonClasses} bg-gray-500 hover:bg-gray-600`;
+	const deleteButtonClasses = `${actionButtonClasses} bg-red-600 hover:bg-red-700`;
+	const spinnerClasses =
+		'h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent';
+	const smallSpinnerClasses =
+		'h-3 w-3 animate-spin rounded-full border border-white border-t-transparent';
+
+	// Stats card data structure
+	const statsCards = [
+		{
+			label: 'Total Tasks',
+			value: () => $todoStats$.total,
+			color: 'blue',
+			icon: 'M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'
+		},
+		{
+			label: 'Completed',
+			value: () => $todoStats$.completed,
+			color: 'green',
+			icon: 'M5 13l4 4L19 7'
+		},
+		{
+			label: 'Remaining',
+			value: () => $todoStats$.remaining,
+			color: 'orange',
+			icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'
+		}
+	];
+
 	// API requests
 	const loadTodosRequest = useTrpcRequest(
 		createTrpcRequestFn(() => {
@@ -65,6 +107,14 @@
 	const toggleError$ = toggleTodoRequest.errorMessage.pipe(shareIt());
 	const updateError$ = updateTodoRequest.errorMessage.pipe(shareIt());
 	const deleteError$ = deleteTodoRequest.errorMessage.pipe(shareIt());
+
+	// Error display data structure
+	const errorDisplays = [
+		{ error$: () => $addError$, request: addTodoRequest, label: 'Add' },
+		{ error$: () => $toggleError$, request: toggleTodoRequest, label: 'Toggle' },
+		{ error$: () => $updateError$, request: updateTodoRequest, label: 'Update' },
+		{ error$: () => $deleteError$, request: deleteTodoRequest, label: 'Delete' }
+	];
 
 	// Derived observables
 	const completedTodos$ = todos$.pipe(
@@ -194,21 +244,19 @@
 			>
 				<div class="rounded-lg border border-red-200 bg-red-50 p-4 shadow-lg">
 					<div class="flex items-start gap-3">
-						<div class="flex-shrink-0">
-							<svg
-								class="h-5 w-5 text-red-400"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-								></path>
-							</svg>
-						</div>
+						<svg
+							class="h-5 w-5 flex-shrink-0 text-red-400"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+							></path>
+						</svg>
 						<div class="flex-1">
 							<h3 class="text-sm font-medium text-red-800">Loading Error</h3>
 							<p class="mt-1 text-sm text-red-700">{$errorMessage$}</p>
@@ -234,23 +282,30 @@
 
 		<main class="space-y-8">
 			<!-- Add new todo -->
-			<section class="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
+			<section class="{cardClasses} p-8">
 				<h2 class="mb-6 text-2xl font-semibold text-gray-800">Add New Task</h2>
-				
+
 				<!-- Add Todo Error Display -->
 				{#if $addError$}
-					<div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
+					<div class="mb-4 {errorCardClasses}">
 						<div class="flex items-center gap-2">
-							<svg class="h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+							<svg class={errorIconClasses} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								></path>
 							</svg>
-							<p class="text-sm text-red-700">{$addError$}</p>
-							<button
-								onclick={() => addTodoRequest.clearError()}
-								class="ml-auto text-red-400 hover:text-red-600"
-							>
+							<p class={errorTextClasses}>{$addError$}</p>
+							<button onclick={() => addTodoRequest.clearError()} class={errorCloseButtonClasses}>
 								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M6 18L18 6M6 6l12 12"
+									></path>
 								</svg>
 							</button>
 						</div>
@@ -264,16 +319,16 @@
 						oninput={(e) => todoActions.updateNewTodoText((e.target as HTMLInputElement).value)}
 						placeholder="Enter your task..."
 						onkeydown={(e) => handleKeydown(e, () => todoActions.addTodo($newTodoText$))}
-						class="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-lg transition-all outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500"
+						class={inputClasses}
 					/>
 					<button
 						onclick={() => todoActions.addTodo($newTodoText$)}
 						disabled={!$newTodoText$.trim() || $addLoading$}
-						class="rounded-lg bg-blue-600 px-8 py-3 font-semibold text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg disabled:cursor-not-allowed disabled:bg-gray-400"
+						class={primaryButtonClasses}
 					>
 						{#if $addLoading$}
 							<div class="flex items-center gap-2">
-								<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+								<div class={spinnerClasses}></div>
 								Adding...
 							</div>
 						{:else}
@@ -285,79 +340,39 @@
 
 			<!-- Stats Dashboard -->
 			<section class="grid grid-cols-1 gap-6 md:grid-cols-3">
-				<div class="rounded-xl border border-gray-200 bg-white p-6 shadow-lg">
-					<div class="flex items-center justify-between">
-						<div>
-							<p class="text-sm font-medium tracking-wide text-gray-600 uppercase">Total Tasks</p>
-							<p class="text-3xl font-bold text-gray-800">{$todoStats$.total}</p>
-						</div>
-						<div class="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-							<svg
-								class="h-6 w-6 text-blue-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
+				{#each statsCards as card}
+					<div class="{cardClasses} p-6">
+						<div class="flex items-center justify-between">
+							<div>
+								<p class="text-sm font-medium tracking-wide text-gray-600 uppercase">
+									{card.label}
+								</p>
+								<p class="text-3xl font-bold text-{card.color}-600">{card.value()}</p>
+							</div>
+							<div
+								class="flex h-12 w-12 items-center justify-center rounded-lg bg-{card.color}-100"
 							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-								></path>
-							</svg>
+								<svg
+									class="h-6 w-6 text-{card.color}-600"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d={card.icon}
+									></path>
+								</svg>
+							</div>
 						</div>
 					</div>
-				</div>
-				<div class="rounded-xl border border-gray-200 bg-white p-6 shadow-lg">
-					<div class="flex items-center justify-between">
-						<div>
-							<p class="text-sm font-medium tracking-wide text-gray-600 uppercase">Completed</p>
-							<p class="text-3xl font-bold text-green-600">{$todoStats$.completed}</p>
-						</div>
-						<div class="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
-							<svg
-								class="h-6 w-6 text-green-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 13l4 4L19 7"
-								></path>
-							</svg>
-						</div>
-					</div>
-				</div>
-				<div class="rounded-xl border border-gray-200 bg-white p-6 shadow-lg">
-					<div class="flex items-center justify-between">
-						<div>
-							<p class="text-sm font-medium tracking-wide text-gray-600 uppercase">Remaining</p>
-							<p class="text-3xl font-bold text-orange-600">{$todoStats$.remaining}</p>
-						</div>
-						<div class="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100">
-							<svg
-								class="h-6 w-6 text-orange-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-								></path>
-							</svg>
-						</div>
-					</div>
-				</div>
+				{/each}
 			</section>
 
 			<!-- Todo list -->
-			<section class="rounded-xl border border-gray-200 bg-white shadow-lg">
+			<section class={cardClasses}>
 				<div class="border-b border-gray-200 p-6">
 					<h2 class="text-2xl font-semibold text-gray-800">Your Tasks</h2>
 				</div>
@@ -404,65 +419,47 @@
 								<div
 									class="group rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all hover:shadow-md"
 								>
-									<!-- Toggle Error Display -->
-									{#if $toggleError$}
-										<div class="mb-3 rounded-lg border border-red-200 bg-red-50 p-2">
-											<div class="flex items-center gap-2">
-												<svg class="h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-												</svg>
-												<p class="text-sm text-red-700">{$toggleError$}</p>
-												<button
-													onclick={() => toggleTodoRequest.clearError()}
-													class="ml-auto text-red-400 hover:text-red-600"
-												>
-													<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+									<!-- Error displays for todo operations -->
+									{#each errorDisplays as errorDisplay}
+										{#if errorDisplay.error$()}
+											<div class="mb-3 {errorCardClasses} p-2">
+												<div class="flex items-center gap-2">
+													<svg
+														class={errorIconClasses}
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+														></path>
 													</svg>
-												</button>
+													<p class={errorTextClasses}>{errorDisplay.error$()}</p>
+													<button
+														onclick={() => errorDisplay.request.clearError()}
+														class={errorCloseButtonClasses}
+													>
+														<svg
+															class="h-4 w-4"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M6 18L18 6M6 6l12 12"
+															></path>
+														</svg>
+													</button>
+												</div>
 											</div>
-										</div>
-									{/if}
-
-									<!-- Update Error Display -->
-									{#if $updateError$}
-										<div class="mb-3 rounded-lg border border-red-200 bg-red-50 p-2">
-											<div class="flex items-center gap-2">
-												<svg class="h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-												</svg>
-												<p class="text-sm text-red-700">{$updateError$}</p>
-												<button
-													onclick={() => updateTodoRequest.clearError()}
-													class="ml-auto text-red-400 hover:text-red-600"
-												>
-													<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-													</svg>
-												</button>
-											</div>
-										</div>
-									{/if}
-
-									<!-- Delete Error Display -->
-									{#if $deleteError$}
-										<div class="mb-3 rounded-lg border border-red-200 bg-red-50 p-2">
-											<div class="flex items-center gap-2">
-												<svg class="h-4 w-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-												</svg>
-												<p class="text-sm text-red-700">{$deleteError$}</p>
-												<button
-													onclick={() => deleteTodoRequest.clearError()}
-													class="ml-auto text-red-400 hover:text-red-600"
-												>
-													<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-													</svg>
-												</button>
-											</div>
-										</div>
-									{/if}
+										{/if}
+									{/each}
 
 									<div class="flex items-center gap-4">
 										<div class="flex items-center gap-2">
@@ -474,7 +471,7 @@
 												class="h-5 w-5 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
 											/>
 											{#if $toggleLoading$}
-												<div class="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+												<div class="{spinnerClasses} border-blue-600"></div>
 											{/if}
 										</div>
 
@@ -504,11 +501,11 @@
 												<button
 													onclick={() => todoActions.saveEdit($editingId$, $editingText$)}
 													disabled={$updateLoading$}
-													class="rounded-md bg-green-600 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+													class={saveButtonClasses}
 												>
 													{#if $updateLoading$}
 														<div class="flex items-center gap-1">
-															<div class="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
+															<div class={smallSpinnerClasses}></div>
 															Saving...
 														</div>
 													{:else}
@@ -518,26 +515,30 @@
 												<button
 													onclick={todoActions.cancelEditing}
 													disabled={$updateLoading$}
-													class="rounded-md bg-gray-500 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:bg-gray-400"
+													class={cancelButtonClasses}
 												>
 													Cancel
 												</button>
 											{:else}
 												<button
 													onclick={() => todoActions.startEditing(todo)}
-													disabled={$loading$ || $addLoading$ || $toggleLoading$ || $updateLoading$ || $deleteLoading$}
-													class="rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+													disabled={$loading$ ||
+														$addLoading$ ||
+														$toggleLoading$ ||
+														$updateLoading$ ||
+														$deleteLoading$}
+													class={editButtonClasses}
 												>
 													Edit
 												</button>
 												<button
 													onclick={() => todoActions.deleteTodo(todo.id)}
 													disabled={$deleteLoading$}
-													class="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+													class={deleteButtonClasses}
 												>
 													{#if $deleteLoading$}
 														<div class="flex items-center gap-1">
-															<div class="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent"></div>
+															<div class={smallSpinnerClasses}></div>
 															Deleting...
 														</div>
 													{:else}
