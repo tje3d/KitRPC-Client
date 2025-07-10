@@ -1,16 +1,50 @@
+import { hasPermission } from '$lib/auth';
 import { prisma } from '$lib/prisma';
 import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import { createPermissionMiddleware } from './middleware';
 import { t } from './trpc';
+
+// Input validation schemas
+const todoInputSchema = z.object({
+	text: z.string().min(1, 'Todo text is required')
+});
+
+const todoIdSchema = z.object({
+	id: z.string().cuid('Invalid todo ID')
+});
+
+const todoUpdateSchema = z.object({
+	id: z.string().cuid('Invalid todo ID'),
+	text: z.string().min(1, 'Todo text is required')
+});
+
+// Create permission middlewares
+const canReadTodos = createPermissionMiddleware('todo', 'read');
+const canCreateTodos = createPermissionMiddleware('todo', 'create');
+const canUpdateTodos = createPermissionMiddleware('todo', 'update');
+const canDeleteTodos = createPermissionMiddleware('todo', 'delete');
+
+// Protected procedures
+const readTodosProcedure = t.procedure.use(canReadTodos);
+const createTodosProcedure = t.procedure.use(canCreateTodos);
+const updateTodosProcedure = t.procedure.use(canUpdateTodos);
+const deleteTodosProcedure = t.procedure.use(canDeleteTodos);
 
 export const todosRouter = t.router({
 	// Get all todos
-	getAll: t.procedure.query(async () => {
+	getAll: readTodosProcedure.query(async ({ ctx }) => {
 		try {
+			const isAdmin = hasPermission(ctx.user, 'admin', 'manage');
+
 			const todos = await prisma.todo.findMany({
-				orderBy: {
-					createdAt: 'desc'
+				where: isAdmin ? {} : { userId: ctx.user.id },
+				orderBy: { createdAt: 'desc' },
+				include: {
+					user: isAdmin ? { select: { id: true, email: true, mobile: true } } : false
 				}
 			});
+
 			return todos.map((todo) => ({
 				...todo,
 				createdAt: todo.createdAt.toISOString()
@@ -24,159 +58,140 @@ export const todosRouter = t.router({
 	}),
 
 	// Add a new todo
-	add: t.procedure
-		.input((input: any) => {
-			if (!input || typeof input.text !== 'string' || input.text.trim().length === 0) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Todo text is required'
-				});
-			}
-			return { text: input.text };
-		})
-		.mutation(async ({ input }) => {
-			try {
-				const newTodo = await prisma.todo.create({
-					data: {
-						text: input.text,
-						completed: false
-					}
-				});
-				return {
-					...newTodo,
-					createdAt: newTodo.createdAt.toISOString()
-				};
-			} catch (error) {
-				throw new TRPCError({
-					code: 'INTERNAL_SERVER_ERROR',
-					message: 'Failed to create todo'
-				});
-			}
-		}),
+	add: createTodosProcedure.input(todoInputSchema).mutation(async ({ input, ctx }) => {
+		try {
+			const newTodo = await prisma.todo.create({
+				data: {
+					text: input.text,
+					completed: false,
+					userId: ctx.user.id
+				}
+			});
+			return {
+				...newTodo,
+				createdAt: newTodo.createdAt.toISOString()
+			};
+		} catch (error) {
+			throw new TRPCError({
+				code: 'INTERNAL_SERVER_ERROR',
+				message: 'Failed to create todo'
+			});
+		}
+	}),
 
 	// Toggle todo completion
-	toggle: t.procedure
-		.input((input: any) => {
-			if (!input || typeof input.id !== 'string') {
+	toggle: updateTodosProcedure.input(todoIdSchema).mutation(async ({ input, ctx }) => {
+		try {
+			const existingTodo = await prisma.todo.findUnique({
+				where: { id: input.id }
+			});
+
+			if (!existingTodo) {
+				throw new TRPCError({ code: 'NOT_FOUND', message: 'Todo not found' });
+			}
+
+			const isAdmin = hasPermission(ctx.user, 'admin', 'manage');
+			if (!isAdmin && existingTodo.userId !== ctx.user.id) {
 				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Todo ID is required'
+					code: 'FORBIDDEN',
+					message: 'You can only toggle your own todos'
 				});
 			}
-			return { id: input.id };
-		})
-		.mutation(async ({ input }) => {
-			try {
-				// First, get the current todo
-				const existingTodo = await prisma.todo.findUnique({
-					where: { id: input.id }
-				});
 
-				if (!existingTodo) {
-					throw new TRPCError({
-						code: 'NOT_FOUND',
-						message: 'Todo not found'
-					});
-				}
+			const updatedTodo = await prisma.todo.update({
+				where: { id: input.id },
+				data: { completed: !existingTodo.completed }
+			});
 
-				// Update the todo
-				const updatedTodo = await prisma.todo.update({
-					where: { id: input.id },
-					data: {
-						completed: !existingTodo.completed
-					}
-				});
-
-				return {
-					...updatedTodo,
-					createdAt: updatedTodo.createdAt.toISOString()
-				};
-			} catch (error) {
-				if (error instanceof TRPCError) {
-					throw error;
-				}
-				throw new TRPCError({
-					code: 'INTERNAL_SERVER_ERROR',
-					message: 'Failed to toggle todo'
-				});
-			}
-		}),
+			return {
+				...updatedTodo,
+				createdAt: updatedTodo.createdAt.toISOString()
+			};
+		} catch (error) {
+			if (error instanceof TRPCError) throw error;
+			throw new TRPCError({
+				code: 'INTERNAL_SERVER_ERROR',
+				message: 'Failed to toggle todo'
+			});
+		}
+	}),
 
 	// Update todo text
-	update: t.procedure
-		.input((input: any) => {
-			if (
-				!input ||
-				typeof input.id !== 'string' ||
-				typeof input.text !== 'string' ||
-				input.text.trim().length === 0
-			) {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Todo ID and text are required'
-				});
-			}
-			return { id: input.id, text: input.text };
-		})
-		.mutation(async ({ input }) => {
-			try {
-				const updatedTodo = await prisma.todo.update({
-					where: { id: input.id },
-					data: {
-						text: input.text
-					}
-				});
+	update: updateTodosProcedure.input(todoUpdateSchema).mutation(async ({ input, ctx }) => {
+		try {
+			const existingTodo = await prisma.todo.findUnique({
+				where: { id: input.id }
+			});
 
-				return {
-					...updatedTodo,
-					createdAt: updatedTodo.createdAt.toISOString()
-				};
-			} catch (error: any) {
-				if (error.code === 'P2025') {
-					throw new TRPCError({
-						code: 'NOT_FOUND',
-						message: 'Todo not found'
-					});
-				}
+			if (!existingTodo) {
+				throw new TRPCError({ code: 'NOT_FOUND', message: 'Todo not found' });
+			}
+
+			const isAdmin = hasPermission(ctx.user, 'admin', 'manage');
+			if (!isAdmin && existingTodo.userId !== ctx.user.id) {
 				throw new TRPCError({
-					code: 'INTERNAL_SERVER_ERROR',
-					message: 'Failed to update todo'
+					code: 'FORBIDDEN',
+					message: 'You can only update your own todos'
 				});
 			}
-		}),
+
+			const updatedTodo = await prisma.todo.update({
+				where: { id: input.id },
+				data: { text: input.text }
+			});
+
+			return {
+				...updatedTodo,
+				createdAt: updatedTodo.createdAt.toISOString()
+			};
+		} catch (error: any) {
+			if (error instanceof TRPCError) throw error;
+			if (error.code === 'P2025') {
+				throw new TRPCError({ code: 'NOT_FOUND', message: 'Todo not found' });
+			}
+			throw new TRPCError({
+				code: 'INTERNAL_SERVER_ERROR',
+				message: 'Failed to update todo'
+			});
+		}
+	}),
 
 	// Delete a todo
-	delete: t.procedure
-		.input((input: any) => {
-			if (!input || typeof input.id !== 'string') {
-				throw new TRPCError({
-					code: 'BAD_REQUEST',
-					message: 'Todo ID is required'
-				});
-			}
-			return { id: input.id };
-		})
-		.mutation(async ({ input }) => {
-			try {
-				const deletedTodo = await prisma.todo.delete({
-					where: { id: input.id }
-				});
+	delete: deleteTodosProcedure.input(todoIdSchema).mutation(async ({ input, ctx }) => {
+		try {
+			const existingTodo = await prisma.todo.findUnique({
+				where: { id: input.id }
+			});
 
-				return {
-					...deletedTodo,
-					createdAt: deletedTodo.createdAt.toISOString()
-				};
-			} catch (error: any) {
-				if (error.code === 'P2025') {
-					throw new TRPCError({
-						code: 'NOT_FOUND',
-						message: 'Todo not found'
-					});
-				}
+			if (!existingTodo) {
+				throw new TRPCError({ code: 'NOT_FOUND', message: 'Todo not found' });
+			}
+
+			const isAdmin = hasPermission(ctx.user, 'admin', 'manage');
+			if (!isAdmin && existingTodo.userId !== ctx.user.id) {
 				throw new TRPCError({
-					code: 'INTERNAL_SERVER_ERROR',
-					message: 'Failed to delete todo'
+					code: 'FORBIDDEN',
+					message: 'You can only delete your own todos'
 				});
 			}
-		})
+
+			const deletedTodo = await prisma.todo.delete({
+				where: { id: input.id }
+			});
+
+			return {
+				...deletedTodo,
+				createdAt: deletedTodo.createdAt.toISOString()
+			};
+		} catch (error: any) {
+			if (error instanceof TRPCError) throw error;
+			if (error.code === 'P2025') {
+				throw new TRPCError({ code: 'NOT_FOUND', message: 'Todo not found' });
+			}
+			throw new TRPCError({
+				code: 'INTERNAL_SERVER_ERROR',
+				message: 'Failed to delete todo'
+			});
+		}
+	})
 });

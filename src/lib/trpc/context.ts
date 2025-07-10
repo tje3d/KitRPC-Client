@@ -1,11 +1,23 @@
 import type { RequestEvent } from '@sveltejs/kit';
+import { validateSession } from '$lib/auth';
 
-// we're not using the event parameter is this example,
-// hence the eslint-disable rule
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function createContext(event: RequestEvent) {
+	// Extract token from cookies
+	const token = event.cookies.get('session_token');
+	
+	// Validate session if token exists
+	let user = null;
+	if (token) {
+		const session = await validateSession(token);
+		if (session) {
+			user = session.user;
+		}
+	}
+
 	return {
-		// context information
+		user,
+		request: event.request,
+		cookies: event.cookies
 	};
 }
 
