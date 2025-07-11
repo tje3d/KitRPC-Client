@@ -48,29 +48,8 @@ const isAuthenticated = t.middleware(async ({ ctx, next }) => {
 	});
 });
 
-// Middleware for checking permissions
-const hasPermissionMiddleware = (resource: string, action: string) =>
-	t.middleware(async ({ ctx, next }) => {
-		if (!ctx.user) {
-			throw new TRPCError({
-				code: 'UNAUTHORIZED',
-				message: 'You must be logged in'
-			});
-		}
-
-		if (!hasPermission(ctx.user, resource, action)) {
-			throw new TRPCError({
-				code: 'FORBIDDEN',
-				message: `You don't have permission to ${action} ${resource}`
-			});
-		}
-
-		return next({ ctx });
-	});
-
 // Protected procedures
 const protectedProcedure = t.procedure.use(isAuthenticated);
-const adminProcedure = t.procedure.use(hasPermissionMiddleware('admin', 'manage'));
 
 export const authRouter = t.router({
 	// Register new user
