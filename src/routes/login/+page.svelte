@@ -1,28 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
-	import { shareIt } from '$lib/helpers/rxjs.helper';
-	import { subscribe } from '$lib/helpers/svelte-rxjs.helper';
-	import { createTrpcRequestFn, useTrpcRequest } from '$lib/helpers/useTrpcRequest.helper';
-	import { trpc } from '$lib/trpc/client';
-	import { BehaviorSubject } from 'rxjs';
+	import { SvelteSubject } from '$lib/helpers/rxjs.helper';
+	import LoginProvider from '$lib/providers/LoginProvider.svelte';
 
 	// Form state
-	const useEmail$ = new BehaviorSubject<boolean>(true);
-	const email$ = new BehaviorSubject<string>('');
-	const mobile$ = new BehaviorSubject<string>('');
-	const password$ = new BehaviorSubject<string>('');
-
-	// Login request
-	const loginRequest = useTrpcRequest(
-		createTrpcRequestFn((input: { email?: string; mobile?: string; password: string }) => {
-			return trpc(page).auth.login.mutate(input);
-		})
-	);
-
-	// Observable streams
-	const loading$ = loginRequest.loading.pipe(shareIt());
-	const errorMessage$ = loginRequest.errorMessage.pipe(shareIt());
+	const useEmail$ = new SvelteSubject<boolean>(true);
+	const email$ = new SvelteSubject<string>('');
+	const mobile$ = new SvelteSubject<string>('');
+	const password$ = new SvelteSubject<string>('');
 
 	// Class constants
 	const inputClasses =
@@ -36,213 +21,192 @@
 	const spinnerClasses = 'mr-3 -ml-1 h-5 w-5 animate-spin text-white';
 	const errorCardClasses = 'rounded-md border border-red-200 bg-red-50 p-4';
 
-	// Subscribe to successful login responses using the new subscribe helper
-	subscribe(loginRequest.responseSuccess, (result) => {
-		if (result) {
-			// Login successful, redirect to home page
-			goto('/');
-		}
-	});
+	function onLoggedIn() {
+		goto('/');
+	}
 
-	// Actions
-	const loginActions = {
-		handleLogin(e: SubmitEvent) {
-			e.preventDefault();
+	function handleFormSubmit(event: Event, loginFn: (data: any) => void) {
+		event.preventDefault();
+		const loginData = {
+			password: $password$,
+			...($useEmail$ ? { email: $email$ } : { mobile: $mobile$ })
+		};
+		loginFn(loginData);
+	}
 
-			const loginData = {
-				password: $password$,
-				...($useEmail$ ? { email: $email$ } : { mobile: $mobile$ })
-			};
+	function handleToggleLoginMethod(clearErrorFn: () => void) {
+		useEmail$.next(!$useEmail$);
+		email$.next('');
+		mobile$.next('');
+		clearErrorFn();
+	}
 
-			loginRequest.request(loginData);
-		},
-
-		toggleLoginMethod() {
-			useEmail$.next(!$useEmail$);
-			email$.next('');
-			mobile$.next('');
-			loginRequest.clearError();
-		},
-
-		updateEmail(value: string) {
-			email$.next(value);
-		},
-
-		updateMobile(value: string) {
-			mobile$.next(value);
-		},
-
-		updatePassword(value: string) {
-			password$.next(value);
-		},
-
-		clearError() {
-			loginRequest.clearError();
-		}
-	};
+	function handleClearError(clearErrorFn: () => void) {
+		clearErrorFn();
+	}
 </script>
 
 <svelte:head>
 	<title>Login - Todo Manager</title>
 </svelte:head>
 
-<div
-	class="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 px-4"
->
-	<div class="w-full max-w-md space-y-8">
-		<div class="text-center">
-			<h2 class="text-3xl font-bold text-gray-900">Sign in to your account</h2>
-			<p class="mt-2 text-sm text-gray-600">
-				Or
-				<a href="/register" class="font-medium text-blue-600 hover:text-blue-500">
-					create a new account
-				</a>
-			</p>
-		</div>
+<LoginProvider {onLoggedIn} let:login let:clearError let:errorMessage let:loading>
+	<div
+		class="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50 px-4"
+	>
+		<div class="w-full max-w-md space-y-8">
+			<div class="text-center">
+				<h2 class="text-3xl font-bold text-gray-900">Sign in to your account</h2>
+				<p class="mt-2 text-sm text-gray-600">
+					Or
+					<a href="/register" class="font-medium text-blue-600 hover:text-blue-500">
+						create a new account
+					</a>
+				</p>
+			</div>
 
-		<div class="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
-			<form onsubmit={loginActions.handleLogin} class="space-y-6">
-				<!-- Login method toggle -->
-				<div class="flex justify-center">
-					<div class="flex rounded-lg bg-gray-100 p-1">
-						<button
-							type="button"
-							onclick={loginActions.toggleLoginMethod}
-							class="{toggleButtonClasses} {$useEmail$
-								? activeToggleClasses
-								: inactiveToggleClasses}"
-						>
-							Email
-						</button>
-						<button
-							type="button"
-							onclick={loginActions.toggleLoginMethod}
-							class="{toggleButtonClasses} {!$useEmail$
-								? activeToggleClasses
-								: inactiveToggleClasses}"
-						>
-							Mobile
-						</button>
-					</div>
-				</div>
-
-				<!-- Error Display -->
-				{#if $errorMessage$}
-					<div class={errorCardClasses}>
-						<div class="flex items-center justify-between">
-							<div class="flex">
-								<svg
-									class="h-5 w-5 flex-shrink-0 text-red-400"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-								>
-									<path
-										fill-rule="evenodd"
-										d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-								<p class="ml-3 text-sm text-red-800">{$errorMessage$}</p>
-							</div>
+			<div class="rounded-xl border border-gray-200 bg-white p-8 shadow-lg">
+				<form onsubmit={(e) => handleFormSubmit(e, login)} class="space-y-6">
+					<!-- Login method toggle -->
+					<div class="flex justify-center">
+						<div class="flex rounded-lg bg-gray-100 p-1">
 							<button
-								onclick={() => loginActions.clearError()}
-								class="text-red-400 hover:text-red-600"
+								type="button"
+								onclick={() => handleToggleLoginMethod(clearError)}
+								class="{toggleButtonClasses} {$useEmail$
+									? activeToggleClasses
+									: inactiveToggleClasses}"
 							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M6 18L18 6M6 6l12 12"
-									></path>
-								</svg>
+								Email
+							</button>
+							<button
+								type="button"
+								onclick={() => handleToggleLoginMethod(clearError)}
+								class="{toggleButtonClasses} {!$useEmail$
+									? activeToggleClasses
+									: inactiveToggleClasses}"
+							>
+								Mobile
 							</button>
 						</div>
 					</div>
-				{/if}
 
-				<!-- Email/Mobile Input -->
-				<div>
-					{#if $useEmail$}
-						<label for="email" class={labelClasses}>Email address</label>
-						<input
-							id="email"
-							name="email"
-							type="email"
-							autocomplete="email"
-							required
-							value={$email$}
-							oninput={(e) => loginActions.updateEmail((e.target as HTMLInputElement).value)}
-							class={inputClasses}
-							placeholder="Enter your email"
-						/>
-					{:else}
-						<label for="mobile" class={labelClasses}>Mobile number</label>
-						<input
-							id="mobile"
-							name="mobile"
-							type="tel"
-							autocomplete="tel"
-							required
-							value={$mobile$}
-							oninput={(e) => loginActions.updateMobile((e.target as HTMLInputElement).value)}
-							class={inputClasses}
-							placeholder="Enter your mobile number"
-						/>
+					<!-- Error Display -->
+					{#if errorMessage}
+						<div class={errorCardClasses}>
+							<div class="flex items-center justify-between">
+								<div class="flex">
+									<svg
+										class="h-5 w-5 flex-shrink-0 text-red-400"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+									<p class="ml-3 text-sm text-red-800">{errorMessage}</p>
+								</div>
+								<button
+									aria-label="clear"
+									onclick={() => handleClearError(clearError)}
+									class="text-red-400 hover:text-red-600"
+								>
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										></path>
+									</svg>
+								</button>
+							</div>
+						</div>
 					{/if}
-				</div>
 
-				<!-- Password Input -->
-				<div>
-					<label for="password" class={labelClasses}>Password</label>
-					<input
-						id="password"
-						name="password"
-						type="password"
-						autocomplete="current-password"
-						required
-						value={$password$}
-						oninput={(e) => loginActions.updatePassword((e.target as HTMLInputElement).value)}
-						class={inputClasses}
-						placeholder="Enter your password"
-					/>
-				</div>
-
-				<!-- Submit Button -->
-				<div>
-					<button
-						type="submit"
-						disabled={$loading$ || (!$email$ && !$mobile$) || !$password$}
-						class={primaryButtonClasses}
-					>
-						{#if $loading$}
-							<svg
-								class={spinnerClasses}
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-							>
-								<circle
-									class="opacity-25"
-									cx="12"
-									cy="12"
-									r="10"
-									stroke="currentColor"
-									stroke-width="4"
-								></circle>
-								<path
-									class="opacity-75"
-									fill="currentColor"
-									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-								></path>
-							</svg>
-							Signing in...
+					<!-- Email/Mobile Input -->
+					<div>
+						{#if $useEmail$}
+							<label for="email" class={labelClasses}>Email address</label>
+							<input
+								id="email"
+								name="email"
+								type="email"
+								autocomplete="email"
+								required
+								bind:value={$email$}
+								class={inputClasses}
+								placeholder="Enter your email"
+							/>
 						{:else}
-							Sign in
+							<label for="mobile" class={labelClasses}>Mobile number</label>
+							<input
+								id="mobile"
+								name="mobile"
+								type="tel"
+								autocomplete="tel"
+								required
+								bind:value={$mobile$}
+								class={inputClasses}
+								placeholder="Enter your mobile number"
+							/>
 						{/if}
-					</button>
-				</div>
-			</form>
+					</div>
+
+					<!-- Password Input -->
+					<div>
+						<label for="password" class={labelClasses}>Password</label>
+						<input
+							id="password"
+							name="password"
+							type="password"
+							autocomplete="current-password"
+							required
+							bind:value={$password$}
+							class={inputClasses}
+							placeholder="Enter your password"
+						/>
+					</div>
+
+					<!-- Submit Button -->
+					<div>
+						<button
+							type="submit"
+							disabled={loading || (!$email$ && !$mobile$) || !$password$}
+							class={primaryButtonClasses}
+						>
+							{#if loading}
+								<svg
+									class={spinnerClasses}
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+								Signing in...
+							{:else}
+								Sign in
+							{/if}
+						</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	</div>
-</div>
+</LoginProvider>

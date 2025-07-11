@@ -52,7 +52,8 @@ export const todosRouter = t.router({
 		} catch (error) {
 			throw new TRPCError({
 				code: 'INTERNAL_SERVER_ERROR',
-				message: 'Failed to fetch todos'
+				message: 'Failed to fetch todos',
+				cause: error
 			});
 		}
 	}),
@@ -74,7 +75,8 @@ export const todosRouter = t.router({
 		} catch (error) {
 			throw new TRPCError({
 				code: 'INTERNAL_SERVER_ERROR',
-				message: 'Failed to create todo'
+				message: 'Failed to create todo',
+				cause: error
 			});
 		}
 	}),
@@ -111,7 +113,8 @@ export const todosRouter = t.router({
 			if (error instanceof TRPCError) throw error;
 			throw new TRPCError({
 				code: 'INTERNAL_SERVER_ERROR',
-				message: 'Failed to toggle todo'
+				message: 'Failed to toggle todo',
+				cause: error
 			});
 		}
 	}),
@@ -151,7 +154,8 @@ export const todosRouter = t.router({
 			}
 			throw new TRPCError({
 				code: 'INTERNAL_SERVER_ERROR',
-				message: 'Failed to update todo'
+				message: 'Failed to update todo',
+				cause: error
 			});
 		}
 	}),
@@ -190,7 +194,8 @@ export const todosRouter = t.router({
 			}
 			throw new TRPCError({
 				code: 'INTERNAL_SERVER_ERROR',
-				message: 'Failed to delete todo'
+				message: 'Failed to delete todo',
+				cause: error
 			});
 		}
 	})

@@ -126,7 +126,8 @@ export const authRouter = t.router({
 			}
 			throw new TRPCError({
 				code: 'INTERNAL_SERVER_ERROR',
-				message: 'Failed to register user'
+				message: 'Failed to register user',
+				cause: error
 			});
 		}
 	}),
@@ -203,9 +204,11 @@ export const authRouter = t.router({
 			if (error instanceof TRPCError) {
 				throw error;
 			}
+
 			throw new TRPCError({
 				code: 'INTERNAL_SERVER_ERROR',
-				message: 'Failed to login'
+				message: 'Failed to login',
+				cause: error
 			});
 		}
 	}),
@@ -225,7 +228,8 @@ export const authRouter = t.router({
 		} catch (error) {
 			throw new TRPCError({
 				code: 'INTERNAL_SERVER_ERROR',
-				message: 'Failed to logout'
+				message: 'Failed to logout',
+				cause: error
 			});
 		}
 	}),

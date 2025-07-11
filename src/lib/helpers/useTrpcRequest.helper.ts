@@ -5,6 +5,7 @@ import {
 	EMPTY,
 	Observable,
 	Subject,
+	TimeoutError,
 	catchError,
 	distinctUntilChanged,
 	filter,
@@ -19,6 +20,7 @@ import {
 	switchMap,
 	tap,
 	throwError,
+	timeout,
 	timer
 } from 'rxjs';
 
@@ -40,6 +42,7 @@ export interface TrpcRequestWrapOptions {
 	shouldTrigger?: Observable<boolean>;
 	initialData?: any;
 	extractErrorMessage?: (error: TRPCClientError<any>) => string | undefined;
+	timeout?: number; // Timeout in milliseconds
 }
 
 // ─── Global Subjects ──────────────────────────────────────────────────────────
@@ -76,7 +79,7 @@ function retryOnTrpcRetriable<T>(count: number, delay: number, maxDelay: number)
 	);
 }
 
-// ─── tRPC Request Wrapper Class ───────────────────────────────────
+// ─── tRPC Request Wrapper Class ───────────────────────────────
 
 export class TrpcRequestWrap<TParams, TResponse> {
 	readonly loading = new SvelteSubject<boolean>(false);
@@ -95,7 +98,8 @@ export class TrpcRequestWrap<TParams, TResponse> {
 		cacheResponse: false,
 		startWithCache: false,
 		requestOnSubscribe: false,
-		global: false
+		global: false,
+		timeout: 60000 // 60 seconds default timeout
 	};
 
 	constructor(
@@ -116,7 +120,8 @@ export class TrpcRequestWrap<TParams, TResponse> {
 			validateResponse,
 			shouldTrigger,
 			initialData,
-			extractErrorMessage
+			extractErrorMessage,
+			timeout: timeoutMs
 		} = mergedOptions;
 
 		const requestTrigger$ = this.createRequestTrigger(
@@ -133,7 +138,8 @@ export class TrpcRequestWrap<TParams, TResponse> {
 			startWithCache,
 			localStorageKey,
 			shouldTrigger,
-			global
+			global,
+			timeout: timeoutMs
 		});
 
 		this.responseSuccess = this.setupSuccessStream(validateResponse, extractErrorMessage);
@@ -143,17 +149,17 @@ export class TrpcRequestWrap<TParams, TResponse> {
 
 	// ─── Public Methods ────────────────────────────────────────────────────────
 
-	request(params: TParams) {
+	request = (params: TParams) => {
 		this.trigger.next(params);
-	}
+	};
 
 	/**
 	 * Clears any existing error state by emitting undefined to the response stream
 	 * This will reset both errorMessage and error$ observables
 	 */
-	clearError() {
+	clearError = () => {
 		this.clearErrorSubject.next(undefined);
-	}
+	};
 
 	// ─── Stream Setup Methods ──────────────────────────────────────────────────
 
@@ -209,6 +215,22 @@ export class TrpcRequestWrap<TParams, TResponse> {
 				: finalize(() => this.loading.next(false)),
 			catchError((err) => {
 				this.loading.next(false);
+				// Handle timeout errors specifically
+				if (err instanceof TimeoutError) {
+					const timeoutError = new TRPCClientError('Request timeout', {
+						result: {
+							error: {
+								code: 'TIMEOUT',
+								message: 'Request timeout',
+								data: {
+									code: 'TIMEOUT',
+									httpStatus: 408
+								}
+							}
+						}
+					});
+					return of(timeoutError as any);
+				}
 				return from(this.loadInitialCache()).pipe(catchError(() => of(undefined)));
 			})
 		);
@@ -220,6 +242,7 @@ export class TrpcRequestWrap<TParams, TResponse> {
 	): Observable<TResponse> {
 		const request$ = () =>
 			from(this.requestFn(params)).pipe(
+				timeout(options.timeout!), // Apply timeout to the request
 				retryOnTrpcRetriable(options.retryCount!, options.retryDelay!, options.retryMaxDelay!),
 				tap((v) => trpcApiResponses$.next(v))
 			);
@@ -402,7 +425,7 @@ export class TrpcRequestWrap<TParams, TResponse> {
 	}
 }
 
-// ─── Helper Functions ─────────────────────────────────────────────────────────
+// ─── Helper Functions ──────────────────────────────────────────────────────
 
 /**
  * Creates a new TrpcRequestWrap instance for managing tRPC requests
