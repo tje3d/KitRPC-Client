@@ -99,3 +99,9 @@ export function debounceWithImmediateAndMaxWait<T>(
 			};
 		});
 }
+
+export const getOb = <T>(input: Observable<T>): T => {
+	let value: any;
+	input.subscribe((v) => (value = v)).unsubscribe();
+	return value;
+};

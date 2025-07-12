@@ -20,17 +20,15 @@ export const onDestroy$ = defer(() => {
 });
 
 // Enhanced subscription function with better type support and callback handling
-export function subscribe<T>(
-	observable: Observable<T>,
-	callback: (value: T) => void
-): Subscription;
+export function subscribe<T>(observable: Observable<T>): Subscription;
+export function subscribe<T>(observable: Observable<T>, callback: (value: T) => void): Subscription;
 export function subscribe<T>(
 	observable: Observable<T>,
 	observer: Partial<Observer<T>>
 ): Subscription;
 export function subscribe<T>(
 	observable: Observable<T>,
-	callbackOrObserver: ((value: T) => void) | Partial<Observer<T>>
+	callbackOrObserver?: ((value: T) => void) | Partial<Observer<T>>
 ): Subscription {
 	const subscription = observable.subscribe(callbackOrObserver as any);
 
@@ -72,11 +70,13 @@ export function autoSubscribe<T>(
 ): Subscription;
 export function autoSubscribe<T>(
 	observable: Observable<T>,
-	nextOrOptions: ((value: T) => void) | {
-		next?: (value: T) => void;
-		error?: (error: any) => void;
-		complete?: () => void;
-	},
+	nextOrOptions:
+		| ((value: T) => void)
+		| {
+				next?: (value: T) => void;
+				error?: (error: any) => void;
+				complete?: () => void;
+		  },
 	error?: (error: any) => void,
 	complete?: () => void
 ): Subscription {
@@ -119,7 +119,7 @@ export function subscribeMultiple<T extends Record<string, Observable<any>>>(
 	}
 
 	onDestroy(() => {
-		subscriptions.forEach(sub => sub.unsubscribe());
+		subscriptions.forEach((sub) => sub.unsubscribe());
 	});
 
 	return subscriptions;
@@ -151,9 +151,7 @@ export function c(defClasses: string, ...propsClass: (string | undefined)[]): st
 		return defClasses;
 	}
 
-	return [defClasses]
-		.concat(propsClass.filter((i) => typeof i !== 'undefined'))
-		.join(' ');
+	return [defClasses].concat(propsClass.filter((i) => typeof i !== 'undefined')).join(' ');
 }
 
 // Utility to create a derived observable that automatically unsubscribes
@@ -182,7 +180,7 @@ export function combine<T extends readonly Observable<any>[]>(
 	observables.forEach((observable, index) => {
 		subscribe(observable, (value) => {
 			values[index] = value;
-			if (!hasAllValues && values.every(v => v !== undefined)) {
+			if (!hasAllValues && values.every((v) => v !== undefined)) {
 				hasAllValues = true;
 			}
 			if (hasAllValues) {

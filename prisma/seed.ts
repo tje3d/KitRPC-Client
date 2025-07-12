@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { hashPassword } from '../src/lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -119,11 +120,14 @@ async function main() {
 			throw new Error('Required roles not found');
 		}
 
+		// Hash passwords for sample users
+		const hashedPassword = await hashPassword('123456');
+
 		// Create sample users
 		const regularUser = await prisma.user.create({
 			data: {
 				email: 'user@example.com',
-				password: '123456',
+				password: hashedPassword,
 				roleId: userRole.id
 			}
 		});
@@ -131,7 +135,7 @@ async function main() {
 		const adminUser = await prisma.user.create({
 			data: {
 				email: 'admin@example.com',
-				password: '123456',
+				password: hashedPassword,
 				roleId: adminRole.id
 			}
 		});

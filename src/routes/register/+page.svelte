@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { setAuthUser, setIsLoggedIn } from '$lib/flow/auth.flow';
 	import { SvelteSubject } from '$lib/helpers/rxjs.helper';
 	import RegisterProvider from '$lib/providers/RegisterProvider.svelte';
-	import { fade, fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+	import { fade, fly } from 'svelte/transition';
 
 	// Form state
 	const useEmail$ = new SvelteSubject<boolean>(true);
@@ -84,7 +85,12 @@
 		clearError();
 	}
 
-	function onRegistered() {
+	function onRegistered(user: App.AuthUser, token: string) {
+		// Set authentication state
+		setAuthUser(user);
+		setIsLoggedIn(true);
+
+		// Navigate to home
 		goto('/');
 	}
 
