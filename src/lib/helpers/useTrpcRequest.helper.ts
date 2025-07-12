@@ -45,6 +45,19 @@ export interface TrpcRequestWrapOptions {
 	timeout?: number; // Timeout in milliseconds
 }
 
+// ─── Validation Error Types ───────────────────────────────────────────────────
+
+interface ValidationError {
+	code: string;
+	message: string;
+	path: string[];
+	minimum?: number;
+	maximum?: number;
+	type?: string;
+	inclusive?: boolean;
+	exact?: boolean;
+}
+
 // ─── Global Subjects ──────────────────────────────────────────────────────────
 
 export const trpcNetworkErrors$ = new Subject<TRPCClientError<any>>();
@@ -79,7 +92,89 @@ function retryOnTrpcRetriable<T>(count: number, delay: number, maxDelay: number)
 	);
 }
 
-// ─── tRPC Request Wrapper Class ───────────────────────────────
+// ─── Validation Error Parsing ─────────────────────────────────────────────────
+
+function parseValidationErrors(message: string): ValidationError[] | null {
+	try {
+		// Try to parse the message as JSON array
+		const parsed = JSON.parse(message);
+		if (Array.isArray(parsed)) {
+			return parsed as ValidationError[];
+		}
+		return null;
+	} catch {
+		return null;
+	}
+}
+
+function formatValidationError(error: ValidationError): string {
+	const fieldName = error.path.length > 0 ? error.path.join('.') : 'field';
+	const capitalizedField = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+
+	switch (error.code) {
+		case 'too_small':
+			if (error.type === 'string') {
+				return `${capitalizedField} must be at least ${error.minimum} characters long`;
+			}
+			if (error.type === 'number') {
+				return `${capitalizedField} must be at least ${error.minimum}`;
+			}
+			if (error.type === 'array') {
+				return `${capitalizedField} must contain at least ${error.minimum} items`;
+			}
+			return `${capitalizedField} is too small`;
+
+		case 'too_big':
+			if (error.type === 'string') {
+				return `${capitalizedField} must be no more than ${error.maximum} characters long`;
+			}
+			if (error.type === 'number') {
+				return `${capitalizedField} must be no more than ${error.maximum}`;
+			}
+			if (error.type === 'array') {
+				return `${capitalizedField} must contain no more than ${error.maximum} items`;
+			}
+			return `${capitalizedField} is too big`;
+
+		case 'invalid_type':
+			return `${capitalizedField} must be a valid ${error.type}`;
+
+		case 'invalid_string':
+			return `${capitalizedField} format is invalid`;
+
+		case 'invalid_email':
+			return `${capitalizedField} must be a valid email address`;
+
+		case 'invalid_url':
+			return `${capitalizedField} must be a valid URL`;
+
+		case 'invalid_date':
+			return `${capitalizedField} must be a valid date`;
+
+		case 'custom':
+			return error.message || `${capitalizedField} is invalid`;
+
+		default:
+			// Fallback to the original message if available
+			return error.message || `${capitalizedField} is invalid`;
+	}
+}
+
+function formatValidationErrors(errors: ValidationError[]): string {
+	if (errors.length === 0) {
+		return 'Validation failed';
+	}
+
+	if (errors.length === 1) {
+		return formatValidationError(errors[0]);
+	}
+
+	// Multiple errors - format as a list
+	const formattedErrors = errors.map(formatValidationError);
+	return formattedErrors.join('; ');
+}
+
+// ─── tRPC Request Wrapper Class ───────────────────────────
 
 export class TrpcRequestWrap<TParams, TResponse> {
 	readonly loading = new SvelteSubject<boolean>(false);
@@ -386,26 +481,34 @@ export class TrpcRequestWrap<TParams, TResponse> {
 			if (customMessage) return customMessage;
 		}
 
+		// Handle validation errors first (BAD_REQUEST with validation details)
+		if (error.data?.code === 'BAD_REQUEST' && error.message) {
+			const validationErrors = parseValidationErrors(error.message);
+			if (validationErrors) {
+				return formatValidationErrors(validationErrors);
+			}
+		}
+
 		// Handle tRPC specific error codes
 		switch (error.data?.code) {
 			case 'UNAUTHORIZED':
-				return 'You are not authorized to perform this action. Please log in';
+				return error?.message ?? 'You are not authorized to perform this action. Please log in';
 			case 'FORBIDDEN':
-				return 'You do not have permission to perform this action';
+				return error?.message ?? 'You do not have permission to perform this action';
 			case 'NOT_FOUND':
-				return 'The requested information was not found';
+				return error?.message ?? 'The requested information was not found';
 			case 'CONFLICT':
-				return 'Data conflict. Please try again';
+				return error?.message ?? 'Data conflict. Please try again';
 			case 'BAD_REQUEST':
-				return 'Invalid data provided';
+				return error?.message ?? 'Invalid data provided';
 			case 'TIMEOUT':
-				return 'Request timed out. Please try again';
+				return error?.message ?? 'Request timed out. Please try again';
 			case 'TOO_MANY_REQUESTS':
-				return 'Too many requests. Please wait a moment';
+				return error?.message ?? 'Too many requests. Please wait a moment';
 			case 'INTERNAL_SERVER_ERROR':
-				return 'Internal server error. Please try again later';
+				return error?.message ?? 'Internal server error. Please try again later';
 			case 'PARSE_ERROR':
-				return 'Error processing data';
+				return error?.message ?? 'Error processing data';
 			default:
 				break;
 		}

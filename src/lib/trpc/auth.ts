@@ -163,7 +163,7 @@ export const authRouter = t.router({
 
 			if (!user) {
 				throw new TRPCError({
-					code: 'UNAUTHORIZED',
+					code: 'BAD_REQUEST',
 					message: 'Invalid credentials'
 				});
 			}
@@ -172,7 +172,7 @@ export const authRouter = t.router({
 			const isValidPassword = await verifyPassword(input.password, user.password);
 			if (!isValidPassword) {
 				throw new TRPCError({
-					code: 'UNAUTHORIZED',
+					code: 'BAD_REQUEST',
 					message: 'Invalid credentials'
 				});
 			}
