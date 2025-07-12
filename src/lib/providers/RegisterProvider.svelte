@@ -4,7 +4,7 @@
 	import { createTrpcRequestFn, useTrpcRequest } from '$lib/helpers/useTrpcRequest.helper';
 	import { trpc } from '$lib/trpc/client';
 
-	export let onRegistered: () => void;
+	export let onRegistered: (user: App.AuthUser, token: string) => void;
 
 	const { clearError, errorMessage, loading, request, responseSuccess } = useTrpcRequest(
 		createTrpcRequestFn((input: { email?: string; mobile?: string; password: string }) => {
@@ -15,7 +15,7 @@
 	subscribe(responseSuccess, (result) => {
 		if (!result) return;
 
-		onRegistered();
+		onRegistered(result.user, result.token);
 	});
 
 	function register(input: { email?: string; mobile?: string; password: string }) {

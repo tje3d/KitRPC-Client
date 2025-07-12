@@ -96,6 +96,22 @@ export const authRouter = t.router({
 					mobile: input.mobile,
 					password: hashedPassword,
 					roleId: input.roleId || defaultRole.id
+				},
+				include: {
+					role: {
+						include: {
+							permissions: {
+								include: {
+									permission: true
+								}
+							}
+						}
+					},
+					permissions: {
+						include: {
+							permission: true
+						}
+					}
 				}
 			});
 
@@ -116,7 +132,9 @@ export const authRouter = t.router({
 				user: {
 					id: user.id,
 					email: user.email,
-					mobile: user.mobile
+					mobile: user.mobile,
+					role: user.role,
+					permissions: user.permissions
 				},
 				token
 			};
