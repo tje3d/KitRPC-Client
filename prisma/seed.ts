@@ -106,6 +106,43 @@ async function main() {
 		console.log('👥 Roles already exist, skipping role creation.');
 	}
 
+	// Check if users already exist
+	const existingUsers = await prisma.user.count();
+	if (existingUsers === 0) {
+		console.log('👤 Creating sample users...');
+
+		// Get existing roles
+		const userRole = await prisma.role.findUnique({ where: { name: 'user' } });
+		const adminRole = await prisma.role.findUnique({ where: { name: 'admin' } });
+
+		if (!userRole || !adminRole) {
+			throw new Error('Required roles not found');
+		}
+
+		// Create sample users
+		const regularUser = await prisma.user.create({
+			data: {
+				email: 'user@example.com',
+				password: '123456',
+				roleId: userRole.id
+			}
+		});
+
+		const adminUser = await prisma.user.create({
+			data: {
+				email: 'admin@example.com',
+				password: '123456',
+				roleId: adminRole.id
+			}
+		});
+
+		console.log('✅ Sample users created and assigned roles!');
+		console.log(`   📧 Regular user: ${regularUser.email} (password: 123456)`);
+		console.log(`   📧 Admin user: ${adminUser.email} (password: 123456)`);
+	} else {
+		console.log('👤 Users already exist, skipping user creation.');
+	}
+
 	// Check if todos already exist
 	const existingTodos = await prisma.todo.count();
 	if (existingTodos === 0) {
