@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { setAuthUser, setIsLoggedIn } from '$lib/flow/auth.flow';
 	import { SvelteSubject } from '$lib/helpers/rxjs.helper';
+	import { toast } from '$lib/toast/store';
 	import RegisterProvider from '$lib/providers/RegisterProvider.svelte';
 	import { quintOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
@@ -89,6 +90,9 @@
 		// Set authentication state
 		setAuthUser(user);
 		setIsLoggedIn(true);
+
+		// Show success toast
+		toast.success('Account created successfully! Welcome to TaskFlow.');
 
 		// Navigate to home
 		goto('/');

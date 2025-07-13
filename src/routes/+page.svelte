@@ -1,21 +1,17 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { isLoggedIn } from '$lib/flow/auth.flow';
+	import { authUser, isLoggedIn } from '$lib/flow/auth.flow';
+	import { toast } from '$lib/toast/store';
 	import TodoProvider from '$lib/providers/TodoProvider.svelte';
 	import { onMount } from 'svelte';
 	import { elasticOut, quintOut } from 'svelte/easing';
 	import { fade, fly, scale } from 'svelte/transition';
 
-	// Local state for editing
 	let editingId: string | null = null;
 	let editingText: string = '';
 	let newTodoText: string = '';
-
-	// Reference to TodoProvider
 	let todoProvider: TodoProvider;
 
-	// Modern styling classes
 	const cardClasses = 'backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl shadow-2xl';
 	const errorCardClasses = 'backdrop-blur-sm bg-red-50/80 border border-red-200 rounded-2xl p-4';
 	const primaryButtonClasses =
@@ -27,11 +23,15 @@
 	const cancelButtonClasses = `${actionButtonClasses} bg-gray-500 text-white hover:bg-gray-600 hover:shadow-md`;
 	const deleteButtonClasses = `${actionButtonClasses} bg-red-600 text-white hover:bg-red-700 hover:shadow-md`;
 
-	// Stats card data structure with enhanced styling
+	const navButtonClasses =
+		'rounded-xl bg-white/50 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-white/80';
+	const navPrimaryClasses =
+		'rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:shadow-xl';
+
 	const statsCards = [
 		{
 			label: 'Total Tasks',
-			getValue: (stats: any) => stats.total,
+			getValue: (s: any) => s.total,
 			color: 'blue',
 			bgGradient: 'from-blue-500 to-blue-600',
 			iconBg: 'bg-blue-100',
@@ -39,7 +39,7 @@
 		},
 		{
 			label: 'Completed',
-			getValue: (stats: any) => stats.completed,
+			getValue: (s: any) => s.completed,
 			color: 'green',
 			bgGradient: 'from-green-500 to-emerald-600',
 			iconBg: 'bg-green-100',
@@ -47,7 +47,7 @@
 		},
 		{
 			label: 'Remaining',
-			getValue: (stats: any) => stats.remaining,
+			getValue: (s: any) => s.remaining,
 			color: 'orange',
 			bgGradient: 'from-orange-500 to-amber-600',
 			iconBg: 'bg-orange-100',
@@ -55,562 +55,495 @@
 		}
 	];
 
-	const handleKeydown = (event: KeyboardEvent, action: () => void) => {
-		if (event.key === 'Enter') {
-			action();
+	const featureCards = [
+		{
+			title: 'Easy Task Creation',
+			text: 'Quickly add and organize your tasks with our intuitive interface.',
+			color: 'blue'
+		},
+		{
+			title: 'Progress Tracking',
+			text: 'Monitor your productivity with detailed statistics.',
+			color: 'green'
+		},
+		{
+			title: 'Lightning Fast',
+			text: 'Built with modern technology for instant responsiveness.',
+			color: 'purple'
 		}
-	};
+	];
 
-	$: if (!$isLoggedIn && browser) goto('/login');
+	const handleKeydown = (e: KeyboardEvent, fn: () => void) => e.key === 'Enter' && fn();
 
-	// State setter functions
-	function setEditingId(id: string | null) {
-		editingId = id;
-	}
-
-	function setEditingText(text: string) {
-		editingText = text;
-	}
-
-	function setNewTodoText(text: string) {
-		newTodoText = text;
-	}
-
-	// Callback functions for API success
+	// Success handlers with toast notifications
 	function onAddSuccess() {
 		newTodoText = '';
 		todoProvider?.loadTodos();
+		toast.success('Task added successfully!');
 	}
-
 	function onUpdateSuccess() {
 		editingId = null;
 		editingText = '';
 		todoProvider?.loadTodos();
+		toast.success('Task updated successfully!');
 	}
-
 	function onToggleSuccess() {
 		todoProvider?.loadTodos();
+		toast.info('Task status updated');
 	}
-
 	function onDeleteSuccess() {
 		todoProvider?.loadTodos();
+		toast.success('Task deleted successfully!');
+	}
+	function handleLogout() {
+		toast.info('Logged out successfully');
+		goto('/login');
 	}
 
 	onMount(() => {
-		todoProvider?.loadTodos();
+		if ($isLoggedIn) todoProvider?.loadTodos();
 	});
 </script>
 
 <svelte:head>
-	<title>Todo Manager - Stay Organized & Productive</title>
+	<title>TaskFlow - Modern Task Management</title>
 	<meta
 		name="description"
-		content="Professional todo manager to help you stay organized and productive with your daily tasks"
+		content="Professional task management platform with modern design and seamless user experience"
 	/>
 </svelte:head>
 
-<TodoProvider
-	bind:this={todoProvider}
-	let:todos
-	let:todoStats
-	let:loading
-	let:errorMessage
-	let:addLoading
-	let:toggleLoading
-	let:updateLoading
-	let:deleteLoading
-	let:addError
-	let:toggleError
-	let:updateError
-	let:deleteError
-	{onAddSuccess}
-	{onUpdateSuccess}
-	{onToggleSuccess}
-	{onDeleteSuccess}
-	let:loadTodos
-	let:addTodo
-	let:toggleTodo
-	let:startEditing
-	let:saveEdit
-	let:deleteTodo
-	let:clearError
-	let:clearAddError
-	let:clearToggleError
-	let:clearUpdateError
-	let:clearDeleteError
->
-	<div
-		class="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100"
-	>
-		<!-- Background decoration -->
-		<div class="pointer-events-none absolute inset-0 overflow-hidden">
-			<div
-				class="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-600/20 blur-3xl"
-			></div>
-			<div
-				class="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-gradient-to-tr from-indigo-400/20 to-pink-600/20 blur-3xl"
-			></div>
-			<div
-				class="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-full bg-gradient-to-r from-cyan-400/10 to-blue-600/10 blur-3xl"
-			></div>
-		</div>
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+	<!-- decorative blobs -->
+	<div class="pointer-events-none absolute inset-0 overflow-hidden">
+		<div
+			class="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-600/20 blur-3xl"
+		></div>
+		<div
+			class="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-gradient-to-tr from-indigo-400/20 to-pink-600/20 blur-3xl"
+		></div>
+	</div>
 
-		<div class="relative z-10 mx-auto max-w-6xl px-6 py-8">
-			<!-- Header -->
-			<header class="mb-12 text-center" in:fly={{ y: -20, duration: 800, easing: quintOut }}>
-				<div
-					class="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-2xl"
-				>
-					<svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-						/>
-					</svg>
-				</div>
-				<h1
-					class="mb-4 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-6xl font-bold tracking-tight text-transparent"
-				>
-					Todo Manager
-				</h1>
-				<p class="mx-auto max-w-2xl text-xl font-medium text-gray-600">
-					Stay organized and productive with your tasks. Manage your daily workflow with style and
-					efficiency.
-				</p>
-			</header>
-
-			<!-- Global Error Toast -->
-			{#if errorMessage}
-				<div
-					class="fixed top-6 right-6 z-50 max-w-md"
-					in:fly={{ x: 300, duration: 400, easing: quintOut }}
-					out:fly={{ x: 300, duration: 300 }}
-				>
+	<!-- ---------- NAVIGATION ---------- -->
+	<nav class="relative z-10 border-b border-white/20 bg-white/80 backdrop-blur-xl">
+		<div class="mx-auto max-w-7xl px-6">
+			<div class="flex h-16 items-center justify-between">
+				<!-- logo -->
+				<div class="flex items-center gap-3">
 					<div
-						class="rounded-2xl border border-red-200 bg-red-50/90 p-4 shadow-2xl backdrop-blur-xl"
+						class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg"
 					>
-						<div class="flex items-start gap-3">
-							<div
-								class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100"
-							>
-								<svg
-									class="h-4 w-4 text-red-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-									/>
-								</svg>
-							</div>
-							<div class="flex-1">
-								<h3 class="text-sm font-semibold text-red-800">Loading Error</h3>
-								<p class="mt-1 text-sm text-red-700">{errorMessage}</p>
-							</div>
-							<button
-								on:click={clearError}
-								class="flex-shrink-0 rounded-lg p-1 text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"
-								aria-label="Dismiss error"
-							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M6 18L18 6M6 6l12 12"
-									/>
-								</svg>
-							</button>
-						</div>
+						<svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+							/>
+						</svg>
 					</div>
+					<span class="text-xl font-bold text-gray-800">TaskFlow</span>
 				</div>
-			{/if}
 
-			<main class="space-y-8">
-				<!-- Add new todo section -->
-				<section
-					class="{cardClasses} p-8"
-					in:fly={{ y: 20, duration: 600, delay: 200, easing: quintOut }}
-				>
-					<div class="mb-6 flex items-center gap-4">
-						<div
-							class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg"
+				<!-- auth links -->
+				<div class="flex items-center gap-4">
+					{#if $isLoggedIn}
+						<span class="text-sm text-gray-600">Welcome, {$authUser?.email || 'User'}</span>
+						<button
+							on:click={handleLogout}
+							class="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-gray-200"
+							>Logout</button
 						>
-							<svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-								/>
-							</svg>
-						</div>
-						<h2 class="text-2xl font-bold text-gray-800">Add New Task</h2>
-					</div>
+					{:else}
+						<a href="/login" class={navButtonClasses}>Login</a>
+						<a href="/register" class={navPrimaryClasses}>Register</a>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</nav>
 
-					<!-- Add Todo Error Display -->
-					{#if addError}
-						<div class="mb-6 {errorCardClasses}" in:fade={{ duration: 300 }}>
-							<div class="flex items-center gap-3">
-								<svg
-									class="h-5 w-5 flex-shrink-0 text-red-500"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
+	<!-- ---------- MAIN CONTENT ---------- -->
+	<div class="relative z-10 mx-auto max-w-7xl px-6 py-12">
+		{#if $isLoggedIn}
+			<TodoProvider
+				bind:this={todoProvider}
+				let:todos
+				let:todoStats
+				let:loading
+				let:errorMessage
+				let:addLoading
+				let:toggleLoading
+				let:updateLoading
+				let:deleteLoading
+				let:addError
+				let:toggleError
+				let:updateError
+				let:deleteError
+				{onAddSuccess}
+				{onUpdateSuccess}
+				{onToggleSuccess}
+				{onDeleteSuccess}
+				let:loadTodos
+				let:addTodo
+				let:toggleTodo
+				let:startEditing
+				let:saveEdit
+				let:deleteTodo
+				let:clearError
+				let:clearAddError
+				let:clearToggleError
+				let:clearUpdateError
+				let:clearDeleteError
+			>
+				<!-- header -->
+				<header class="mb-12 text-center" in:fly={{ y: -20, duration: 800, easing: quintOut }}>
+					<h1
+						class="mb-4 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-5xl font-bold tracking-tight text-transparent"
+					>
+						Your Task Dashboard
+					</h1>
+					<p class="mx-auto max-w-2xl text-lg text-gray-600">
+						Manage your tasks efficiently with our modern interface
+					</p>
+				</header>
+
+				<!-- global error -->
+				{#if errorMessage}
+					<div
+						class="fixed top-6 right-6 z-50 max-w-md"
+						in:fly={{ x: 300, duration: 400, easing: quintOut }}
+						out:fly={{ x: 300, duration: 300 }}
+					>
+						<div class="{errorCardClasses} shadow-2xl">
+							<div class="flex items-start gap-3">
+								<div
+									class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100"
 								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-									/>
-								</svg>
-								<p class="flex-1 text-sm text-red-700">{addError}</p>
+									<svg
+										class="h-4 w-4 text-red-600"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+										/></svg
+									>
+								</div>
+								<div class="flex-1">
+									<h3 class="text-sm font-semibold text-red-800">Error</h3>
+									<p class="mt-1 text-sm text-red-700">{errorMessage}</p>
+								</div>
 								<button
-									on:click={clearAddError}
-									class="text-red-400 transition-colors hover:text-red-600"
+									on:click={clearError}
+									class="rounded-lg p-1 text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"
 									aria-label="Dismiss error"
 								>
-									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+										><path
 											stroke-linecap="round"
 											stroke-linejoin="round"
 											stroke-width="2"
 											d="M6 18L18 6M6 6l12 12"
-										/>
-									</svg>
+										/></svg
+									>
 								</button>
 							</div>
 						</div>
-					{/if}
-
-					<div class="flex items-center gap-4">
-						<div class="relative flex-1">
-							<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-								<svg
-									class="h-5 w-5 text-gray-400"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-									/>
-								</svg>
-							</div>
-							<input
-								type="text"
-								value={newTodoText}
-								on:input={(e) => setNewTodoText((e.target as HTMLInputElement).value)}
-								placeholder="What needs to be done today?"
-								on:keydown={(e) => handleKeydown(e, () => addTodo(newTodoText))}
-								class="w-full rounded-2xl border border-gray-200 bg-white/50 py-4 pr-4 pl-12 text-lg placeholder-gray-400 backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-							/>
-						</div>
-						<button
-							on:click={() => addTodo(newTodoText)}
-							disabled={!newTodoText.trim() || addLoading}
-							class={primaryButtonClasses}
-						>
-							{#if addLoading}
-								<div class="flex items-center gap-2">
-									<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-										<circle
-											class="opacity-25"
-											cx="12"
-											cy="12"
-											r="10"
-											stroke="currentColor"
-											stroke-width="4"
-										></circle>
-										<path
-											class="opacity-75"
-											fill="currentColor"
-											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-										></path>
-									</svg>
-									Adding...
-								</div>
-							{:else}
-								<div class="flex items-center gap-2">
-									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-										/>
-									</svg>
-									Add Task
-								</div>
-							{/if}
-						</button>
 					</div>
-				</section>
+				{/if}
 
-				<!-- Stats Dashboard -->
-				<section
-					class="grid grid-cols-1 gap-6 md:grid-cols-3"
-					in:fly={{ y: 20, duration: 600, delay: 400, easing: quintOut }}
-				>
-					{#each statsCards as card, index}
-						<div
-							class="{cardClasses} p-6 transition-transform duration-200 hover:scale-105"
-							in:scale={{ duration: 500, delay: 600 + index * 100, easing: elasticOut }}
-						>
-							<div class="flex items-center justify-between">
-								<div>
-									<p class="mb-2 text-sm font-semibold tracking-wide text-gray-500 uppercase">
-										{card.label}
-									</p>
-									<p
-										class="bg-gradient-to-r text-4xl font-bold {card.bgGradient} bg-clip-text text-transparent"
+				<main class="space-y-8">
+					<!-- stats cards -->
+					<section
+						class="grid grid-cols-1 gap-6 md:grid-cols-3"
+						in:fly={{ y: 20, duration: 600, delay: 200, easing: quintOut }}
+					>
+						{#each statsCards as card, index}
+							<div
+								class="{cardClasses} p-6 transition-transform duration-200 hover:scale-105"
+								in:scale={{ duration: 500, delay: 400 + index * 100, easing: elasticOut }}
+							>
+								<div class="flex items-center justify-between">
+									<div>
+										<p class="mb-2 text-sm font-semibold tracking-wide text-gray-500 uppercase">
+											{card.label}
+										</p>
+										<p
+											class="bg-gradient-to-r text-4xl font-bold {card.bgGradient} bg-clip-text text-transparent"
+										>
+											{card.getValue(todoStats)}
+										</p>
+									</div>
+									<div
+										class="h-16 w-16 {card.iconBg} flex items-center justify-center rounded-2xl shadow-lg"
 									>
-										{card.getValue(todoStats)}
-									</p>
-								</div>
-								<div
-									class="h-16 w-16 {card.iconBg} flex items-center justify-center rounded-2xl shadow-lg"
-								>
-									<svg
-										class="h-8 w-8 text-{card.color}-600"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d={card.icon}
-										/>
-									</svg>
+										<svg
+											class="h-8 w-8 text-{card.color}-600"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+											><path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d={card.icon}
+											/></svg
+										>
+									</div>
 								</div>
 							</div>
-						</div>
-					{/each}
-				</section>
+						{/each}
+					</section>
 
-				<!-- Todo list -->
-				<section
-					class={cardClasses}
-					in:fly={{ y: 20, duration: 600, delay: 600, easing: quintOut }}
-				>
-					<div class="border-b border-gray-200/50 p-8">
-						<div class="flex items-center gap-4">
+					<!-- add todo section -->
+					<section
+						class="{cardClasses} p-8"
+						in:fly={{ y: 20, duration: 600, delay: 600, easing: quintOut }}
+					>
+						<div class="mb-6 flex items-center gap-4">
 							<div
-								class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg"
+								class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg"
 							>
 								<svg
 									class="h-6 w-6 text-white"
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
-								>
-									<path
+									><path
 										stroke-linecap="round"
 										stroke-linejoin="round"
 										stroke-width="2"
-										d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-									/>
-								</svg>
-							</div>
-							<h2 class="text-2xl font-bold text-gray-800">Your Tasks</h2>
-							{#if todos.length > 0}
-								<div
-									class="ml-auto rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800"
+										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+									/></svg
 								>
-									{todos.length}
-									{todos.length === 1 ? 'task' : 'tasks'}
-								</div>
-							{/if}
+							</div>
+							<h2 class="text-2xl font-bold text-gray-800">Add New Task</h2>
 						</div>
-					</div>
 
-					<div class="p-8">
-						{#if loading && todos.length === 0}
-							<!-- Enhanced loading skeleton -->
-							<div class="space-y-4">
-								{#each Array(3) as _, i}
-									<div
-										class="animate-pulse rounded-2xl bg-gradient-to-r from-gray-100 to-gray-200 p-6"
-										in:fade={{ delay: i * 100 }}
-									>
-										<div class="flex items-center gap-4">
-											<div class="h-6 w-6 rounded-full bg-gray-300"></div>
-											<div class="h-6 flex-1 rounded-lg bg-gray-300"></div>
-											<div class="flex gap-2">
-												<div class="h-8 w-16 rounded-lg bg-gray-300"></div>
-												<div class="h-8 w-16 rounded-lg bg-gray-300"></div>
-											</div>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{:else if todos.length === 0}
-							<div class="py-20 text-center" in:fade={{ duration: 500 }}>
-								<div
-									class="mx-auto mb-8 flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 shadow-lg"
-								>
+						{#if addError}
+							<div class="mb-6 {errorCardClasses}" in:fade={{ duration: 300 }}>
+								<div class="flex items-center gap-3">
 									<svg
-										class="h-16 w-16 text-blue-500"
+										class="h-5 w-5 text-red-500"
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+										/></svg
 									>
-										<path
+									<p class="text-sm text-red-700">{addError}</p>
+									<button
+										on:click={clearAddError}
+										class="text-red-400 hover:text-red-600"
+										aria-label="Dismiss error"
+										><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+											><path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M6 18L18 6M6 6l12 12"
+											/></svg
+										></button
+									>
+								</div>
+							</div>
+						{/if}
+
+						<div class="flex items-center gap-4">
+							<div class="relative flex-1">
+								<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+									<svg
+										class="h-5 w-5 text-gray-400"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+										/></svg
+									>
+								</div>
+								<input
+									type="text"
+									bind:value={newTodoText}
+									placeholder="What needs to be done today?"
+									on:keydown={(e) => handleKeydown(e, () => addTodo(newTodoText))}
+									class="w-full rounded-2xl border border-gray-200 bg-white/50 py-4 pr-4 pl-12 text-lg placeholder-gray-400 backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+								/>
+							</div>
+							<button
+								on:click={() => addTodo(newTodoText)}
+								disabled={!newTodoText.trim() || addLoading}
+								class={primaryButtonClasses}
+							>
+								{#if addLoading}
+									<div class="flex items-center gap-2">
+										<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24"
+											><circle
+												class="opacity-25"
+												cx="12"
+												cy="12"
+												r="10"
+												stroke="currentColor"
+												stroke-width="4"
+											/><path
+												class="opacity-75"
+												fill="currentColor"
+												d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+											/></svg
+										>Adding...
+									</div>
+								{:else}
+									<div class="flex items-center gap-2">
+										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+											><path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+											/></svg
+										>Add Task
+									</div>
+								{/if}
+							</button>
+						</div>
+					</section>
+
+					<!-- todo list -->
+					<section
+						class={cardClasses}
+						in:fly={{ y: 20, duration: 600, delay: 800, easing: quintOut }}
+					>
+						<div class="border-b border-gray-200/50 p-8">
+							<div class="flex items-center gap-4">
+								<div
+									class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg"
+								>
+									<svg
+										class="h-6 w-6 text-white"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										><path
 											stroke-linecap="round"
 											stroke-linejoin="round"
 											stroke-width="2"
 											d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-										/>
-									</svg>
-								</div>
-								<h3 class="mb-3 text-2xl font-bold text-gray-800">No tasks yet</h3>
-								<p class="mx-auto max-w-md text-lg leading-relaxed text-gray-600">
-									Ready to boost your productivity? Add your first task above and start organizing
-									your day.
-								</p>
-							</div>
-						{:else}
-							<div class="space-y-4">
-								{#each todos as todo, index (todo.id)}
-									<div
-										class="group rounded-2xl border border-white/30 bg-white/60 p-6 backdrop-blur-sm transition-all duration-200 hover:bg-white/80 hover:shadow-xl"
-										in:fly={{ y: 20, duration: 400, delay: index * 50 }}
+										/></svg
 									>
-										<!-- Error displays for todo operations -->
-										{#if toggleError}
-											<div class="mb-4 {errorCardClasses}" in:fade={{ duration: 300 }}>
-												<div class="flex items-center gap-3">
-													<svg
-														class="h-4 w-4 flex-shrink-0 text-red-500"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-														/>
-													</svg>
-													<p class="flex-1 text-sm text-red-700">{toggleError}</p>
-													<button
-														on:click={clearToggleError}
-														class="text-red-400 transition-colors hover:text-red-600"
-														aria-label="Dismiss error"
-													>
-														<svg
-															class="h-4 w-4"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M6 18L18 6M6 6l12 12"
-															/>
-														</svg>
-													</button>
+								</div>
+								<h2 class="text-2xl font-bold text-gray-800">Your Tasks</h2>
+								{#if todos.length}
+									<span
+										class="ml-auto rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800"
+										>{todos.length} {todos.length === 1 ? 'task' : 'tasks'}</span
+									>
+								{/if}
+							</div>
+						</div>
+
+						<div class="p-8">
+							{#if loading && todos.length === 0}
+								<!-- skeletons -->
+								<div class="space-y-4">
+									{#each Array(3) as _, i}
+										<div
+											class="animate-pulse rounded-2xl bg-gradient-to-r from-gray-100 to-gray-200 p-6"
+											in:fade={{ delay: i * 100 }}
+										>
+											<div class="flex items-center gap-4">
+												<div class="h-6 w-6 rounded-full bg-gray-300"></div>
+												<div class="h-6 flex-1 rounded-lg bg-gray-300"></div>
+												<div class="flex gap-2">
+													<div class="h-8 w-16 rounded-lg bg-gray-300"></div>
+													<div class="h-8 w-16 rounded-lg bg-gray-300"></div>
 												</div>
 											</div>
-										{/if}
+										</div>
+									{/each}
+								</div>
+							{:else if todos.length === 0}
+								<div class="py-20 text-center" in:fade={{ duration: 500 }}>
+									<div
+										class="mx-auto mb-8 flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 shadow-lg"
+									>
+										<svg
+											class="h-16 w-16 text-blue-500"
+											fill="none"
+											stroke="currentColor"
+											viewBox="0 0 24 24"
+											><path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+											/></svg
+										>
+									</div>
+									<h3 class="mb-3 text-2xl font-bold text-gray-800">No tasks yet</h3>
+									<p class="mx-auto max-w-md text-lg leading-relaxed text-gray-600">
+										Ready to boost your productivity? Add your first task above and start organizing
+										your day.
+									</p>
+								</div>
+							{:else}
+								<div class="space-y-4">
+									{#each todos as todo, index (todo.id)}
+										<div
+											class="group rounded-2xl border border-white/30 bg-white/60 p-6 backdrop-blur-sm transition-all duration-200 hover:bg-white/80 hover:shadow-xl"
+											in:fly={{ y: 20, duration: 400, delay: index * 50 }}
+										>
+											<!-- errors for this todo -->
+											{#each [{ err: toggleError, clear: clearToggleError }, { err: updateError, clear: clearUpdateError }, { err: deleteError, clear: clearDeleteError }] as { err, clear }}
+												{#if err}
+													<div class="mb-4 {errorCardClasses}" in:fade={{ duration: 300 }}>
+														<div class="flex items-center gap-3">
+															<svg
+																class="h-4 w-4 text-red-500"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+																><path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+																/></svg
+															>
+															<p class="flex-1 text-sm text-red-700">{err}</p>
+															<button
+																on:click={clear}
+																class="text-red-400 hover:text-red-600"
+																aria-label="Dismiss error"
+																><svg
+																	class="h-4 w-4"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
+																	><path
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																		stroke-width="2"
+																		d="M6 18L18 6M6 6l12 12"
+																	/></svg
+																></button
+															>
+														</div>
+													</div>
+												{/if}
+											{/each}
 
-										{#if updateError}
-											<div class="mb-4 {errorCardClasses}" in:fade={{ duration: 300 }}>
-												<div class="flex items-center gap-3">
-													<svg
-														class="h-4 w-4 flex-shrink-0 text-red-500"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-														/>
-													</svg>
-													<p class="flex-1 text-sm text-red-700">{updateError}</p>
-													<button
-														on:click={clearUpdateError}
-														class="text-red-400 transition-colors hover:text-red-600"
-														aria-label="Dismiss error"
-													>
-														<svg
-															class="h-4 w-4"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M6 18L18 6M6 6l12 12"
-															/>
-														</svg>
-													</button>
-												</div>
-											</div>
-										{/if}
-
-										{#if deleteError}
-											<div class="mb-4 {errorCardClasses}" in:fade={{ duration: 300 }}>
-												<div class="flex items-center gap-3">
-													<svg
-														class="h-4 w-4 flex-shrink-0 text-red-500"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															stroke-width="2"
-															d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-														/>
-													</svg>
-													<p class="flex-1 text-sm text-red-700">{deleteError}</p>
-													<button
-														on:click={clearDeleteError}
-														class="text-red-400 transition-colors hover:text-red-600"
-														aria-label="Dismiss error"
-													>
-														<svg
-															class="h-4 w-4"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M6 18L18 6M6 6l12 12"
-															/>
-														</svg>
-													</button>
-												</div>
-											</div>
-										{/if}
-
-										<div class="flex items-center gap-4">
-											<div class="flex items-center gap-3">
+											<div class="flex items-center gap-4">
 												<div class="relative">
 													<input
 														type="checkbox"
@@ -625,200 +558,268 @@
 																class="h-4 w-4 animate-spin text-blue-600"
 																fill="none"
 																viewBox="0 0 24 24"
-															>
-																<circle
+																><circle
 																	class="opacity-25"
 																	cx="12"
 																	cy="12"
 																	r="10"
 																	stroke="currentColor"
 																	stroke-width="4"
-																></circle>
-																<path
+																/><path
 																	class="opacity-75"
 																	fill="currentColor"
 																	d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-																></path>
-															</svg>
+																/></svg
+															>
 														</div>
 													{/if}
 												</div>
-											</div>
 
-											{#if editingId === todo.id}
-												<input
-													type="text"
-													value={editingText}
-													on:input={(e) => setEditingText((e.target as HTMLInputElement).value)}
-													on:keydown={(e) => {
-														if (e.key === 'Enter' && editingId) {
-															saveEdit(editingId, editingText);
-														} else if (e.key === 'Escape') {
-															editingId = null;
-															editingText = '';
-														}
-													}}
-													disabled={updateLoading}
-													class="flex-1 rounded-xl border border-blue-300 bg-white/70 px-4 py-3 backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-													autofocus
-												/>
-											{:else}
-												<span
-													class="flex-1 text-lg font-medium transition-all duration-200 {todo.completed
-														? 'text-gray-500 line-through'
-														: 'text-gray-800'}"
-												>
-													{todo.text}
-												</span>
-											{/if}
-
-											<div
-												class="flex gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-											>
 												{#if editingId === todo.id}
-													<button
-														on:click={() => editingId && saveEdit(editingId, editingText)}
-														disabled={updateLoading}
-														class={saveButtonClasses}
-													>
-														{#if updateLoading}
-															<div class="flex items-center gap-2">
-																<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-																	<circle
-																		class="opacity-25"
-																		cx="12"
-																		cy="12"
-																		r="10"
-																		stroke="currentColor"
-																		stroke-width="4"
-																	></circle>
-																	<path
-																		class="opacity-75"
-																		fill="currentColor"
-																		d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-																	></path>
-																</svg>
-																Saving...
-															</div>
-														{:else}
-															<svg
-																class="mr-1 h-4 w-4"
-																fill="none"
-																stroke="currentColor"
-																viewBox="0 0 24 24"
-															>
-																<path
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																	stroke-width="2"
-																	d="M5 13l4 4L19 7"
-																/>
-															</svg>
-															Save
-														{/if}
-													</button>
-													<button
-														on:click={() => {
-															editingId = null;
-															editingText = '';
+													<input
+														type="text"
+														bind:value={editingText}
+														on:keydown={(e) => {
+															if (e.key === 'Enter' && editingId) saveEdit(editingId, editingText);
+															if (e.key === 'Escape') {
+																editingId = null;
+																editingText = '';
+															}
 														}}
 														disabled={updateLoading}
-														class={cancelButtonClasses}
-													>
-														<svg
-															class="mr-1 h-4 w-4"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
-														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M6 18L18 6M6 6l12 12"
-															/>
-														</svg>
-														Cancel
-													</button>
+														class="flex-1 rounded-xl border border-blue-300 bg-white/70 px-4 py-3 backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+														autofocus
+													/>
 												{:else}
-													<button
-														on:click={() => {
-															setEditingId(todo.id);
-															setEditingText(todo.text);
-														}}
-														disabled={loading ||
-															addLoading ||
-															toggleLoading ||
-															updateLoading ||
-															deleteLoading}
-														class={editButtonClasses}
+													<span
+														class="flex-1 text-lg font-medium transition-all duration-200 {todo.completed
+															? 'text-gray-500 line-through'
+															: 'text-gray-800'}">{todo.text}</span
 													>
-														<svg
-															class="mr-1 h-4 w-4"
-															fill="none"
-															stroke="currentColor"
-															viewBox="0 0 24 24"
+												{/if}
+
+												<div
+													class="flex gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+												>
+													{#if editingId === todo.id}
+														<button
+															on:click={() => editingId && saveEdit(editingId, editingText)}
+															disabled={updateLoading}
+															class={saveButtonClasses}
 														>
-															<path
-																stroke-linecap="round"
-																stroke-linejoin="round"
-																stroke-width="2"
-																d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-															/>
-														</svg>
-														Edit
-													</button>
-													<button
-														on:click={() => deleteTodo(todo.id)}
-														disabled={deleteLoading}
-														class={deleteButtonClasses}
-													>
-														{#if deleteLoading}
-															<div class="flex items-center gap-2">
-																<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-																	<circle
-																		class="opacity-25"
-																		cx="12"
-																		cy="12"
-																		r="10"
-																		stroke="currentColor"
-																		stroke-width="4"
-																	></circle>
-																	<path
-																		class="opacity-75"
-																		fill="currentColor"
-																		d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-																	></path>
-																</svg>
-																Deleting...
-															</div>
-														{:else}
+															{#if updateLoading}
+																<span class="flex items-center gap-2"
+																	><svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"
+																		><circle
+																			class="opacity-25"
+																			cx="12"
+																			cy="12"
+																			r="10"
+																			stroke="currentColor"
+																			stroke-width="4"
+																		/><path
+																			class="opacity-75"
+																			fill="currentColor"
+																			d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+																		/></svg
+																	>Saving...</span
+																>
+															{:else}
+																<svg
+																	class="mr-1 h-4 w-4"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
+																	><path
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																		stroke-width="2"
+																		d="M5 13l4 4L19 7"
+																	/></svg
+																>Save
+															{/if}
+														</button>
+														<button
+															on:click={() => {
+																editingId = null;
+																editingText = '';
+															}}
+															disabled={updateLoading}
+															class={cancelButtonClasses}
+														>
 															<svg
 																class="mr-1 h-4 w-4"
 																fill="none"
 																stroke="currentColor"
 																viewBox="0 0 24 24"
-															>
-																<path
+																><path
 																	stroke-linecap="round"
 																	stroke-linejoin="round"
 																	stroke-width="2"
-																	d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-																/>
-															</svg>
-															Delete
-														{/if}
-													</button>
-												{/if}
+																	d="M6 18L18 6M6 6l12 12"
+																/></svg
+															>Cancel
+														</button>
+													{:else}
+														<button
+															on:click={() => {
+																editingId = todo.id;
+																editingText = todo.text;
+															}}
+															disabled={loading ||
+																addLoading ||
+																toggleLoading ||
+																updateLoading ||
+																deleteLoading}
+															class={editButtonClasses}
+														>
+															<svg
+																class="mr-1 h-4 w-4"
+																fill="none"
+																stroke="currentColor"
+																viewBox="0 0 24 24"
+																><path
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																	stroke-width="2"
+																	d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+																/></svg
+															>Edit
+														</button>
+														<button
+															on:click={() => deleteTodo(todo.id)}
+															disabled={deleteLoading}
+															class={deleteButtonClasses}
+														>
+															{#if deleteLoading}
+																<span class="flex items-center gap-2"
+																	><svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"
+																		><circle
+																			class="opacity-25"
+																			cx="12"
+																			cy="12"
+																			r="10"
+																			stroke="currentColor"
+																			stroke-width="4"
+																		/><path
+																			class="opacity-75"
+																			fill="currentColor"
+																			d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+																		/></svg
+																	>Deleting...</span
+																>
+															{:else}
+																<svg
+																	class="mr-1 h-4 w-4"
+																	fill="none"
+																	stroke="currentColor"
+																	viewBox="0 0 24 24"
+																	><path
+																		stroke-linecap="round"
+																		stroke-linejoin="round"
+																		stroke-width="2"
+																		d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+																	/></svg
+																>Delete
+															{/if}
+														</button>
+													{/if}
+												</div>
 											</div>
 										</div>
-									</div>
-								{/each}
-							</div>
-						{/if}
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</section>
+				</main>
+			</TodoProvider>
+		{:else}
+			<!-- ---------- LANDING PAGE ---------- -->
+			<div class="text-center" in:fly={{ y: 20, duration: 800, easing: quintOut }}>
+				<!-- hero -->
+				<div class="mb-16">
+					<div
+						class="mb-8 inline-flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-2xl"
+					>
+						<svg class="h-12 w-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+							/></svg
+						>
 					</div>
-				</section>
-			</main>
-		</div>
+					<h1
+						class="mb-6 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-6xl font-bold tracking-tight text-transparent"
+					>
+						Welcome to TaskFlow
+					</h1>
+					<p class="mx-auto mb-8 max-w-3xl text-xl leading-relaxed text-gray-600">
+						The modern task management platform designed for productivity. Organize your work, track
+						your progress, and achieve your goals with our intuitive and beautiful interface.
+					</p>
+					<div class="flex items-center justify-center gap-4">
+						<a
+							href="/register"
+							class="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+							>Get Started Free</a
+						>
+						<a
+							href="/login"
+							class="rounded-2xl border border-gray-300 bg-white/50 px-8 py-4 text-lg font-semibold text-gray-700 backdrop-blur-sm transition-all duration-200 hover:bg-white/80"
+							>Sign In</a
+						>
+					</div>
+				</div>
+
+				<!-- features -->
+				<div
+					class="grid grid-cols-1 gap-8 md:grid-cols-3"
+					in:fly={{ y: 20, duration: 600, delay: 400, easing: quintOut }}
+				>
+					{#each featureCards as card}
+						<div class="{cardClasses} p-8 text-center">
+							<div
+								class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-{card.color}-500 to-{card.color}-600 shadow-lg"
+							>
+								<svg
+									class="h-8 w-8 text-white"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									{#if card.title === 'Easy Task Creation'}
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+										/>
+									{:else if card.title === 'Progress Tracking'}
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+										/>
+									{:else}
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M13 10V3L4 14h7v7l9-11h-7z"
+										/>
+									{/if}
+								</svg>
+							</div>
+							<h3 class="mb-4 text-xl font-bold text-gray-800">{card.title}</h3>
+							<p class="text-gray-600">{card.text}</p>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 	</div>
-</TodoProvider>
+</div>

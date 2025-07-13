@@ -41,6 +41,20 @@ declare global {
 			user: AuthUser;
 			token: string;
 		};
+
+		// Toast
+		type ToastVariant = 'info' | 'success' | 'warning' | 'error';
+
+		interface ToastData {
+			id: symbol;
+			message: string;
+			variant: ToastVariant;
+			duration: number;
+			pauseOnHover: boolean;
+			createdAt: number;
+			remaining: number;
+			_timer?: ReturnType<typeof setTimeout>;
+		}
 	}
 }
 

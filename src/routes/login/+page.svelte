@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { setAuthUser, setIsLoggedIn } from '$lib/flow/auth.flow';
 	import { SvelteSubject } from '$lib/helpers/rxjs.helper';
+	import { toast } from '$lib/toast/store';
 	import LoginProvider from '$lib/providers/LoginProvider.svelte';
 	import { quintOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
@@ -18,6 +19,62 @@
 	let passwordTouched = false;
 	let showPassword = false;
 
+	// Class constants for reused styles
+	const baseInputClasses =
+		'w-full rounded-2xl border border-gray-200 bg-white/50 px-4 py-3 placeholder-gray-400 backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500';
+	const errorInputClasses = 'border-red-300 bg-red-50/50';
+	const toggleButtonBaseClasses =
+		'rounded-xl px-6 py-2.5 text-sm font-medium transition-all duration-200';
+	const toggleButtonActiveClasses = 'bg-white text-gray-900 shadow-md';
+	const toggleButtonInactiveClasses = 'text-gray-500 hover:text-gray-700';
+	const socialButtonClasses =
+		'group flex items-center justify-center rounded-2xl border border-gray-200 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl';
+	const socialButtonTextClasses =
+		'text-sm font-medium text-gray-700 transition-colors group-hover:text-gray-900';
+	const primaryButtonClasses =
+		'w-full transform rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-lg';
+
+	// Social login providers data
+	const socialProviders = [
+		{
+			name: 'Google',
+			icon: `<svg class="mr-2 h-5 w-5" viewBox="0 0 24 24">
+				<path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+				<path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+				<path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+				<path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+			</svg>`,
+			handler: () => console.log('Google login')
+		},
+		{
+			name: 'Facebook',
+			icon: `<svg class="mr-2 h-5 w-5" fill="#1877F2" viewBox="0 0 24 24">
+				<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+			</svg>`,
+			handler: () => console.log('Facebook login')
+		}
+	];
+
+	// Login method toggle options
+	const loginMethods = [
+		{
+			key: 'email',
+			label: 'Email',
+			icon: `<svg class="mr-2 inline h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+			</svg>`,
+			isActive: true
+		},
+		{
+			key: 'mobile',
+			label: 'Mobile',
+			icon: `<svg class="mr-2 inline h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+			</svg>`,
+			isActive: false
+		}
+	];
+
 	// Computed validation
 	$: emailValid = !emailTouched || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($email$);
 	$: mobileValid = !mobileTouched || /^[\+]?[1-9][\d]{0,15}$/.test($mobile$);
@@ -30,6 +87,9 @@
 		// Set authentication state
 		setAuthUser(user);
 		setIsLoggedIn(true);
+
+		// Show success toast
+		toast.success('Welcome back! You have been signed in successfully.');
 
 		// Navigate to home
 		goto('/');
@@ -71,6 +131,11 @@
 
 	function togglePasswordVisibility() {
 		showPassword = !showPassword;
+	}
+
+	// Helper function to get input classes with error state
+	function getInputClasses(hasError: boolean) {
+		return `${baseInputClasses} ${hasError ? errorInputClasses : ''}`;
 	}
 </script>
 
@@ -131,50 +196,20 @@
 					<!-- Login Method Toggle -->
 					<div class="flex justify-center">
 						<div class="inline-flex rounded-2xl bg-gray-100/80 p-1 shadow-inner backdrop-blur-sm">
-							<button
-								type="button"
-								on:click={() => handleToggleLoginMethod(clearError)}
-								class="rounded-xl px-6 py-2.5 text-sm font-medium transition-all duration-200 {$useEmail$
-									? 'bg-white text-gray-900 shadow-md'
-									: 'text-gray-500 hover:text-gray-700'}"
-							>
-								<svg
-									class="mr-2 inline h-4 w-4"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
+							{#each loginMethods as method}
+								<button
+									type="button"
+									on:click={() => handleToggleLoginMethod(clearError)}
+									class="{toggleButtonBaseClasses} {(
+										method.key === 'email' ? $useEmail$ : !$useEmail$
+									)
+										? toggleButtonActiveClasses
+										: toggleButtonInactiveClasses}"
 								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
-									/>
-								</svg>
-								Email
-							</button>
-							<button
-								type="button"
-								on:click={() => handleToggleLoginMethod(clearError)}
-								class="rounded-xl px-6 py-2.5 text-sm font-medium transition-all duration-200 {!$useEmail$
-									? 'bg-white text-gray-900 shadow-md'
-									: 'text-gray-500 hover:text-gray-700'}"
-							>
-								<svg
-									class="mr-2 inline h-4 w-4"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
-									/>
-								</svg>
-								Mobile
-							</button>
+									{@html method.icon}
+									{method.label}
+								</button>
+							{/each}
 						</div>
 					</div>
 
@@ -233,9 +268,7 @@
 									required
 									bind:value={$email$}
 									on:blur={() => handleInputBlur('email')}
-									class="w-full rounded-2xl border border-gray-200 bg-white/50 px-4 py-3 placeholder-gray-400
-										backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2
-										focus:ring-blue-500 {emailTouched && !emailValid ? 'border-red-300 bg-red-50/50' : ''}"
+									class={getInputClasses(emailTouched && !emailValid)}
 									placeholder="Enter your email address"
 								/>
 								{#if emailTouched && !emailValid}
@@ -255,9 +288,7 @@
 									required
 									bind:value={$mobile$}
 									on:blur={() => handleInputBlur('mobile')}
-									class="w-full rounded-2xl border border-gray-200 bg-white/50 px-4 py-3 placeholder-gray-400
-										backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2
-										focus:ring-blue-500 {mobileTouched && !mobileValid ? 'border-red-300 bg-red-50/50' : ''}"
+									class={getInputClasses(mobileTouched && !mobileValid)}
 									placeholder="Enter your mobile number"
 								/>
 								{#if mobileTouched && !mobileValid}
@@ -289,9 +320,7 @@
 								required
 								bind:value={$password$}
 								on:blur={() => handleInputBlur('password')}
-								class="w-full rounded-2xl border border-gray-200 bg-white/50 px-4 py-3 placeholder-gray-400
-									backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2
-									focus:ring-blue-500 {passwordTouched && !passwordValid ? 'border-red-300 bg-red-50/50' : ''}"
+								class={getInputClasses(passwordTouched && !passwordValid)}
 								placeholder="Enter your password"
 							/>
 							<button
@@ -348,14 +377,7 @@
 					</div>
 
 					<!-- Submit Button -->
-					<button
-						type="submit"
-						disabled={loading || !formValid}
-						class="w-full transform rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3
-							font-semibold text-white shadow-lg transition-all duration-200
-							hover:-translate-y-0.5 hover:shadow-xl focus:ring-2 focus:ring-blue-500
-							focus:ring-offset-2 disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-lg"
-					>
+					<button type="submit" disabled={loading || !formValid} class={primaryButtonClasses}>
 						{#if loading}
 							<div class="flex items-center justify-center">
 								<svg
@@ -407,45 +429,12 @@
 
 				<!-- Social Login -->
 				<div class="grid grid-cols-2 gap-4">
-					<button
-						class="group flex items-center justify-center rounded-2xl border border-gray-200 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
-					>
-						<svg class="mr-2 h-5 w-5" viewBox="0 0 24 24">
-							<path
-								fill="#4285F4"
-								d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-							/>
-							<path
-								fill="#34A853"
-								d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-							/>
-							<path
-								fill="#FBBC05"
-								d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-							/>
-							<path
-								fill="#EA4335"
-								d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-							/>
-						</svg>
-						<span
-							class="text-sm font-medium text-gray-700 transition-colors group-hover:text-gray-900"
-							>Google</span
-						>
-					</button>
-					<button
-						class="group flex items-center justify-center rounded-2xl border border-gray-200 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
-					>
-						<svg class="mr-2 h-5 w-5" fill="#1877F2" viewBox="0 0 24 24">
-							<path
-								d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"
-							/>
-						</svg>
-						<span
-							class="text-sm font-medium text-gray-700 transition-colors group-hover:text-gray-900"
-							>Facebook</span
-						>
-					</button>
+					{#each socialProviders as provider}
+						<button on:click={provider.handler} class={socialButtonClasses}>
+							{@html provider.icon}
+							<span class={socialButtonTextClasses}>{provider.name}</span>
+						</button>
+					{/each}
 				</div>
 			</div>
 
