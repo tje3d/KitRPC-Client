@@ -2,8 +2,8 @@
 	import { goto } from '$app/navigation';
 	import { setAuthUser, setIsLoggedIn } from '$lib/flow/auth.flow';
 	import { SvelteSubject } from '$lib/helpers/rxjs.helper';
-	import { toast } from '$lib/toast/store';
 	import LoginProvider from '$lib/providers/LoginProvider.svelte';
+	import { toast } from '$lib/toast/store';
 	import { quintOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
 

@@ -55,6 +55,25 @@ declare global {
 			remaining: number;
 			_timer?: ReturnType<typeof setTimeout>;
 		}
+
+		// Dialog
+		interface DialogConfig {
+			id: string;
+			component: any;
+			props?: Record<string, any>;
+			onClose?: () => void;
+			preventBackdropClose?: boolean;
+			preventDirtyClose?: boolean;
+			showClose?: boolean;
+			noPadding?: boolean;
+			center?: boolean;
+			fullScreen?: boolean;
+			transitionType?: 'scale' | 'fly';
+		}
+
+		interface DialogState {
+			dialogs: DialogConfig[];
+		}
 	}
 }
 

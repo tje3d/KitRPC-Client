@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
+	import ConfirmDialog from '$lib/dialog/ConfirmDialog.svelte';
+	import { dialogStore } from '$lib/dialog/store';
 	import { authUser, isLoggedIn } from '$lib/flow/auth.flow';
-	import { toast } from '$lib/toast/store';
-	import TodoProvider from '$lib/providers/TodoProvider.svelte';
 	import LogoutProvider from '$lib/providers/LogoutProvider.svelte';
-	import { onMount } from 'svelte';
+	import TodoProvider from '$lib/providers/TodoProvider.svelte';
+	import { toast } from '$lib/toast/store';
+	import { onMount, tick } from 'svelte';
 	import { elasticOut, quintOut } from 'svelte/easing';
 	import { fade, fly, scale } from 'svelte/transition';
 
@@ -101,6 +103,28 @@
 		invalidateAll();
 	}
 
+	// Handle logout with confirmation dialog
+	async function handleLogout(logout: () => void) {
+		dialogStore.open({
+			component: ConfirmDialog,
+			props: {
+				title: 'Confirm Logout',
+				message:
+					'Are you sure you want to log out? You will need to sign in again to access your tasks.',
+				confirm: 'Logout',
+				cancel: 'Cancel',
+				color: 'red',
+				onConfirm() {
+					history.back();
+
+					tick().then(() => {
+						logout();
+					});
+				}
+			}
+		});
+	}
+
 	onMount(() => {
 		if ($isLoggedIn) todoProvider?.loadTodos();
 	});
@@ -159,7 +183,7 @@
 								let:logout
 							>
 								<button
-									on:click={logout}
+									on:click={() => handleLogout(logout)}
 									disabled={loading}
 									class="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
 								>
