@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { authUser, isLoggedIn } from '$lib/flow/auth.flow';
 	import { toast } from '$lib/toast/store';
 	import TodoProvider from '$lib/providers/TodoProvider.svelte';
+	import LogoutProvider from '$lib/providers/LogoutProvider.svelte';
 	import { onMount } from 'svelte';
 	import { elasticOut, quintOut } from 'svelte/easing';
 	import { fade, fly, scale } from 'svelte/transition';
@@ -95,9 +96,9 @@
 		todoProvider?.loadTodos();
 		toast.success('Task deleted successfully!');
 	}
-	function handleLogout() {
+	function onLoggedOut() {
 		toast.info('Logged out successfully');
-		goto('/login');
+		invalidateAll();
 	}
 
 	onMount(() => {
@@ -149,11 +150,98 @@
 				<div class="flex items-center gap-4">
 					{#if $isLoggedIn}
 						<span class="text-sm text-gray-600">Welcome, {$authUser?.email || 'User'}</span>
-						<button
-							on:click={handleLogout}
-							class="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-gray-200"
-							>Logout</button
-						>
+						<LogoutProvider {onLoggedOut}>
+							<svelte:fragment
+								slot="default"
+								let:loading
+								let:errorMessage
+								let:clearError
+								let:logout
+							>
+								<button
+									on:click={logout}
+									disabled={loading}
+									class="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									{#if loading}
+										<span class="flex items-center gap-2">
+											<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+												<circle
+													class="opacity-25"
+													cx="12"
+													cy="12"
+													r="10"
+													stroke="currentColor"
+													stroke-width="4"
+												/>
+												<path
+													class="opacity-75"
+													fill="currentColor"
+													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+												/>
+											</svg>
+											Logging out...
+										</span>
+									{:else}
+										Logout
+									{/if}
+								</button>
+
+								<!-- Logout error display -->
+								{#if errorMessage}
+									<div
+										class="fixed top-6 right-6 z-50 max-w-md"
+										in:fly={{ x: 300, duration: 400, easing: quintOut }}
+										out:fly={{ x: 300, duration: 300 }}
+									>
+										<div class="{errorCardClasses} shadow-2xl">
+											<div class="flex items-start gap-3">
+												<div
+													class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-red-100"
+												>
+													<svg
+														class="h-4 w-4 text-red-600"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+														/>
+													</svg>
+												</div>
+												<div class="flex-1">
+													<h3 class="text-sm font-semibold text-red-800">Logout Error</h3>
+													<p class="mt-1 text-sm text-red-700">{errorMessage}</p>
+												</div>
+												<button
+													on:click={clearError}
+													class="rounded-lg p-1 text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"
+													aria-label="Dismiss error"
+												>
+													<svg
+														class="h-4 w-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M6 18L18 6M6 6l12 12"
+														/>
+													</svg>
+												</button>
+											</div>
+										</div>
+									</div>
+								{/if}
+							</svelte:fragment>
+						</LogoutProvider>
 					{:else}
 						<a href="/login" class={navButtonClasses}>Login</a>
 						<a href="/register" class={navPrimaryClasses}>Register</a>

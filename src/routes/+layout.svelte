@@ -6,15 +6,18 @@
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
+	let user = $derived(data.user);
 
 	// Sync server-side user data with client-side auth state
-	if (data.user) {
-		setAuthUser(data.user);
-		setIsLoggedIn(true);
-	} else {
-		setAuthUser(undefined);
-		setIsLoggedIn(false);
-	}
+	$effect(() => {
+		if (user) {
+			setAuthUser(user);
+			setIsLoggedIn(true);
+		} else {
+			setAuthUser(undefined);
+			setIsLoggedIn(false);
+		}
+	});
 
 	// Initialize auth flow
 	subscribe(initAuthFlow);
