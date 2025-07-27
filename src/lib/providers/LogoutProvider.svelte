@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { subscribe } from '$lib/helpers/svelte-rxjs.helper';
-	import { createTrpcRequestFn, useTrpcRequest } from '$lib/helpers/useTrpcRequest.helper';
-	import { trpc } from '$lib/trpc/client';
+	import { ApiService, useRequest } from '$lib/helpers/useRequest.helper';
+	import type { AjaxResponse } from 'rxjs/ajax';
 
 	export let onLoggedOut: () => void;
 
-	const { clearError, errorMessage, loading, trigger, responseSuccess } = useTrpcRequest(
-		createTrpcRequestFn(() => {
-			return trpc(page).auth.logout.mutate();
-		})
-	);
+	const { clearError, errorMessage, loading, trigger, responseSuccess } = useRequest<
+		void,
+		AjaxResponse<any>
+	>((body) => ApiService.post<any>('/v1/logout', body), {
+		validateResponse: (r) => !!r?.response?.success
+	});
 
 	subscribe(responseSuccess, (result) => {
 		if (!result) return;
@@ -19,7 +19,7 @@
 	});
 
 	function logout() {
-		trigger.next(undefined);
+		trigger.next();
 	}
 </script>
 

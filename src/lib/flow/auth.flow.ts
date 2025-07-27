@@ -55,3 +55,7 @@ export const logoutLocal = () => {
 		}
 	});
 };
+
+export const getTokenValue = () => {
+	return null;
+};

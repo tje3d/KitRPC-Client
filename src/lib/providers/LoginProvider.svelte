@@ -1,24 +1,38 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { subscribe } from '$lib/helpers/svelte-rxjs.helper';
-	import { createTrpcRequestFn, useTrpcRequest } from '$lib/helpers/useTrpcRequest.helper';
-	import { trpc } from '$lib/trpc/client';
+	import { ApiService, useRequest } from '$lib/helpers/useRequest.helper';
+	import type { AjaxResponse } from 'rxjs/ajax';
 
-	export let onLoggedIn: (user: App.AuthUser, token: string) => void;
+	export let onLoggedIn: (user: any, token: string) => void;
 
-	const { clearError, errorMessage, loading, trigger, responseSuccess } = useTrpcRequest(
-		createTrpcRequestFn((input: { email?: string; mobile?: string; password: string }) => {
-			return trpc(page).auth.login.mutate(input);
-		})
-	);
+	const { clearError, errorMessage, loading, trigger, responseSuccess } = useRequest<
+		{
+			identifier: string;
+			password: string;
+			unique_id: string;
+			'g-recaptcha-response': string;
+			two_factor?: string;
+			type: string;
+		},
+		AjaxResponse<{ user: any; token: string; success: boolean }>
+	>((body) => ApiService.post('/v1/user/login', body), {
+		validateResponse: (r) => !!r?.response?.success
+	});
 
 	subscribe(responseSuccess, (result) => {
 		if (!result) return;
 
-		onLoggedIn(result.user, result.token);
+		onLoggedIn(result.response.user, result.response.token);
 	});
 
-	function login(input: { email?: string; mobile?: string; password: string }) {
+	function login(input: {
+		identifier: string;
+		password: string;
+		unique_id: string;
+		'g-recaptcha-response': string;
+		two_factor?: string;
+		type: string;
+	}) {
 		trigger.next(input);
 	}
 </script>
