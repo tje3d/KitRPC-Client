@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import AuthCard from '$lib/components/AuthCard.svelte';
 	import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
 	import FormInput from '$lib/components/FormInput.svelte';
 	import PageWrapper from '$lib/components/PageWrapper.svelte';
@@ -10,8 +11,6 @@
 	import RegisterProvider from '$lib/providers/RegisterProvider.svelte';
 	import { toast } from '$lib/toast/store';
 	import { rules, useForm, type FormConfig } from '$lib/utils/validation';
-	import { quintOut } from 'svelte/easing';
-	import { fly } from 'svelte/transition';
 
 	// Form state
 	const useEmail$ = new SvelteSubject<boolean>(true);
@@ -106,47 +105,15 @@
 	description="Join KitRPC - Create your account to start building powerful tRPC applications"
 >
 	<RegisterProvider {onRegistered} let:loading let:errorMessage let:clearError let:register>
-		<div
-			class="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4"
+		<AuthCard
+			title="Create your account"
+			subtitle="Already have an account?"
+			iconClass="icon-[heroicons--user-plus]"
+			linkText="Sign in"
+			linkHref="/login"
+			linkLabel="Sign in"
 		>
-			<!-- Background decoration -->
-			<div class="pointer-events-none absolute inset-0 overflow-hidden">
-				<div
-					class="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-600/20 blur-3xl"
-				></div>
-				<div
-					class="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-gradient-to-tr from-indigo-400/20 to-pink-600/20 blur-3xl"
-				></div>
-			</div>
-
-			<div
-				class="relative z-10 w-full max-w-md"
-				in:fly={{ y: 20, duration: 600, easing: quintOut }}
-			>
-				<!-- Header -->
-				<div class="mb-8 text-center">
-					<div
-						class="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg"
-					>
-						<span class="icon-[heroicons--user-plus] h-8 w-8 text-white"></span>
-					</div>
-					<h1 class="mb-2 text-3xl font-bold text-gray-900">Create your account</h1>
-					<p class="text-gray-600">
-						Already have an account?
-						<a
-							href="/login"
-							class="font-semibold text-blue-600 transition-colors hover:text-blue-700"
-						>
-							Sign in
-						</a>
-					</p>
-				</div>
-
-				<!-- Main Form Card -->
-				<div
-					class="space-y-6 rounded-3xl border border-white/20 bg-white/80 p-8 shadow-2xl backdrop-blur-xl"
-				>
-					<form on:submit={(e) => handleRegister(e, register)} class="space-y-6" novalidate>
+			<form on:submit={(e) => handleRegister(e, register)} class="space-y-6" novalidate>
 						<!-- Registration Method Toggle -->
 						<div class="flex justify-center">
 							<div class="inline-flex rounded-2xl bg-gray-100/80 p-1 shadow-inner backdrop-blur-sm">
@@ -256,20 +223,18 @@
 							Create account
 						</PrimaryButton>
 
-						<!-- Terms -->
-						<p class="text-center text-xs leading-relaxed text-gray-500">
-							By creating an account, you agree to our
-							<a href="/terms" class="text-blue-600 underline hover:text-blue-700"
-								>Terms of Service</a
-							>
-							and
-							<a href="/privacy" class="text-blue-600 underline hover:text-blue-700"
-								>Privacy Policy</a
-							>
-						</p>
-					</form>
-				</div>
-			</div>
-		</div>
+				<!-- Terms -->
+				<p class="text-center text-xs leading-relaxed text-gray-500">
+					By creating an account, you agree to our
+					<a href="/terms" class="text-blue-600 underline hover:text-blue-700"
+						>Terms of Service</a
+					>
+					and
+					<a href="/privacy" class="text-blue-600 underline hover:text-blue-700"
+						>Privacy Policy</a
+					>
+				</p>
+			</form>
+		</AuthCard>
 	</RegisterProvider>
 </PageWrapper>

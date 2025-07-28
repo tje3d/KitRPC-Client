@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import AuthCard from '$lib/components/AuthCard.svelte';
 	import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
 	import FormInput from '$lib/components/FormInput.svelte';
 	import PageWrapper from '$lib/components/PageWrapper.svelte';
@@ -9,8 +10,6 @@
 	import LoginProvider from '$lib/providers/LoginProvider.svelte';
 	import { toast } from '$lib/toast/store';
 	import { rules, useForm, type FormConfig } from '$lib/utils/validation';
-	import { quintOut } from 'svelte/easing';
-	import { fly } from 'svelte/transition';
 
 	// Form state
 	const useEmail$ = new SvelteSubject<boolean>(true);
@@ -120,47 +119,16 @@
 	description="Sign in to KitRPC - Access your API management dashboard"
 >
 	<LoginProvider {onLoggedIn} let:login let:clearError let:errorMessage let:loading>
-		<div
-			class="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4"
+		<AuthCard
+			title="Welcome back"
+			subtitle="Don't have an account?"
+			iconClass="icon-[heroicons--check-circle]"
+			linkText="Create one now"
+			linkHref="/register"
+			linkLabel="Create one now"
+			footerContent='<p class="text-xs leading-relaxed text-gray-500">Protected by industry-standard encryption. <a href="/security" class="text-blue-600 underline hover:text-blue-700">Learn more</a></p>'
 		>
-			<!-- Background decoration -->
-			<div class="pointer-events-none absolute inset-0 overflow-hidden">
-				<div
-					class="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-600/20 blur-3xl"
-				></div>
-				<div
-					class="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-gradient-to-tr from-indigo-400/20 to-pink-600/20 blur-3xl"
-				></div>
-			</div>
-
-			<div
-				class="relative z-10 w-full max-w-md"
-				in:fly={{ y: 20, duration: 600, easing: quintOut }}
-			>
-				<!-- Header -->
-				<div class="mb-8 text-center">
-					<div
-						class="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg"
-					>
-						<span class="icon-[heroicons--check-circle] h-8 w-8 text-white"></span>
-					</div>
-					<h1 class="mb-2 text-3xl font-bold text-gray-900">Welcome back</h1>
-					<p class="text-gray-600">
-						Don't have an account?
-						<a
-							href="/register"
-							class="font-semibold text-blue-600 transition-colors hover:text-blue-700"
-						>
-							Create one now
-						</a>
-					</p>
-				</div>
-
-				<!-- Main Form Card -->
-				<div
-					class="space-y-6 rounded-3xl border border-white/20 bg-white/80 p-8 shadow-2xl backdrop-blur-xl"
-				>
-					<form on:submit={(e) => handleFormSubmit(e, login)} class="space-y-6" novalidate>
+			<form on:submit={(e) => handleFormSubmit(e, login)} class="space-y-6" novalidate>
 						<!-- Login Method Toggle -->
 						<div class="flex justify-center">
 							<div class="inline-flex rounded-2xl bg-gray-100/80 p-1 shadow-inner backdrop-blur-sm">
@@ -269,17 +237,7 @@
 							></span>
 							Sign in
 						</PrimaryButton>
-					</form>
-				</div>
-
-				<!-- Security Notice -->
-				<div class="mt-8 text-center">
-					<p class="text-xs leading-relaxed text-gray-500">
-						Protected by industry-standard encryption.
-						<a href="/security" class="text-blue-600 underline hover:text-blue-700">Learn more</a>
-					</p>
-				</div>
-			</div>
-		</div>
+			</form>
+		</AuthCard>
 	</LoginProvider>
 </PageWrapper>
