@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import AuthCard from '$lib/components/AuthCard.svelte';
 	import ErrorDisplay from '$lib/components/ErrorDisplay.svelte';
+	import FormCheckbox from '$lib/components/FormCheckbox.svelte';
 	import FormInput from '$lib/components/FormInput.svelte';
 	import PageWrapper from '$lib/components/PageWrapper.svelte';
 	import PrimaryButton from '$lib/components/PrimaryButton.svelte';
@@ -16,6 +17,7 @@
 	const email$ = new SvelteSubject<string>('');
 	const mobile$ = new SvelteSubject<string>('');
 	const password$ = new SvelteSubject<string>('');
+	const rememberMe$ = new SvelteSubject<boolean>(false);
 
 	// Form validation configuration
 	const formConfig: FormConfig = {
@@ -126,118 +128,119 @@
 			linkText="Create one now"
 			linkHref="/register"
 			linkLabel="Create one now"
-			footerContent='<p class="text-xs leading-relaxed text-gray-500">Protected by industry-standard encryption. <a href="/security" class="text-blue-600 underline hover:text-blue-700">Learn more</a></p>'
 		>
 			<form on:submit={(e) => handleFormSubmit(e, login)} class="space-y-6" novalidate>
-						<!-- Login Method Toggle -->
-						<div class="flex justify-center">
-							<div class="inline-flex rounded-2xl bg-gray-100/80 p-1 shadow-inner backdrop-blur-sm">
-								{#each loginMethods as method}
-									<button
-										type="button"
-										on:click={() => handleToggleLoginMethod(clearError)}
-										class="{toggleButtonBaseClasses} {(
-											method.key === 'email' ? $useEmail$ : !$useEmail$
-										)
-											? toggleButtonActiveClasses
-											: toggleButtonInactiveClasses}"
-									>
-										{@html method.icon}
-										{method.label}
-									</button>
-								{/each}
-							</div>
-						</div>
-
-						<!-- Error Display -->
-						<ErrorDisplay
-							{errorMessage}
-							firstError={$firstError}
-							onDismiss={() => {
-								clearError();
-								resetValidation();
-							}}
-						/>
-
-						<!-- Email/Mobile Input -->
-						{#if $useEmail$}
-							<FormInput
-								id="email"
-								name="email"
-								type="email"
-								label="Email address"
-								placeholder="Enter your email address"
-								bind:value={$email$}
-								error={$errors?.['email'] || null}
-								autocomplete="email"
-								required
-								onBlur={handleInputBlur}
-							/>
-						{:else}
-							<FormInput
-								id="mobile"
-								name="mobile"
-								type="tel"
-								label="Mobile number"
-								placeholder="Enter your mobile number"
-								bind:value={$mobile$}
-								error={$errors?.['mobile'] || null}
-								autocomplete="tel"
-								required
-								onBlur={handleInputBlur}
-							/>
-						{/if}
-
-						<!-- Password Input -->
-						<FormInput
-							id="password"
-							name="password"
-							type="password"
-							label="Password"
-							placeholder="Enter your password"
-							bind:value={$password$}
-							error={$errors?.['password'] || null}
-							autocomplete="current-password"
-							required
-							showPasswordToggle
-							onBlur={handleInputBlur}
-						>
-							<a
-								href="/forgot-password"
-								class="text-sm text-blue-600 transition-colors hover:text-blue-700"
-								slot="rightElement"
+				<!-- Login Method Toggle -->
+				<div class="flex justify-center">
+					<div class="inline-flex rounded-2xl bg-gray-100/80 p-1 shadow-inner backdrop-blur-sm">
+						{#each loginMethods as method}
+							<button
+								type="button"
+								on:click={() => handleToggleLoginMethod(clearError)}
+								class="{toggleButtonBaseClasses} {(
+									method.key === 'email' ? $useEmail$ : !$useEmail$
+								)
+									? toggleButtonActiveClasses
+									: toggleButtonInactiveClasses}"
 							>
-								Forgot password?
-							</a>
-						</FormInput>
+								{@html method.icon}
+								{method.label}
+							</button>
+						{/each}
+					</div>
+				</div>
 
-						<!-- Remember Me -->
-						<div class="flex items-center justify-between">
-							<div class="flex items-center">
-								<input
-									id="remember-me"
-									name="remember-me"
-									type="checkbox"
-									class="h-4 w-4 rounded border-gray-300 text-blue-600 transition-colors focus:ring-blue-500"
-								/>
-								<label for="remember-me" class="ml-2 block text-sm text-gray-700">
-									Remember me
-								</label>
-							</div>
-						</div>
+				<!-- Error Display -->
+				<ErrorDisplay
+					{errorMessage}
+					firstError={$firstError}
+					onDismiss={() => {
+						clearError();
+						resetValidation();
+					}}
+				/>
 
-						<!-- Submit Button -->
-						<PrimaryButton
-							type="submit"
-							disabled={loading || !formValid}
-							{loading}
-							loadingText="Signing you in..."
-						>
-							<span class="icon-[heroicons--arrow-right-on-rectangle] mr-2 h-5 w-5" slot="icon"
-							></span>
-							Sign in
-						</PrimaryButton>
+				<!-- Email/Mobile Input -->
+				{#if $useEmail$}
+					<FormInput
+						id="email"
+						name="email"
+						type="email"
+						label="Email address"
+						placeholder="Enter your email address"
+						bind:value={$email$}
+						error={$errors?.['email'] || null}
+						autocomplete="email"
+						required
+						onBlur={handleInputBlur}
+					/>
+				{:else}
+					<FormInput
+						id="mobile"
+						name="mobile"
+						type="tel"
+						label="Mobile number"
+						placeholder="Enter your mobile number"
+						bind:value={$mobile$}
+						error={$errors?.['mobile'] || null}
+						autocomplete="tel"
+						required
+						onBlur={handleInputBlur}
+					/>
+				{/if}
+
+				<!-- Password Input -->
+				<FormInput
+					id="password"
+					name="password"
+					type="password"
+					label="Password"
+					placeholder="Enter your password"
+					bind:value={$password$}
+					error={$errors?.['password'] || null}
+					autocomplete="current-password"
+					required
+					showPasswordToggle
+					onBlur={handleInputBlur}
+				>
+					<a
+						href="/forgot-password"
+						class="text-sm text-blue-600 transition-colors hover:text-blue-700"
+						slot="rightElement"
+					>
+						Forgot password?
+					</a>
+				</FormInput>
+
+				<!-- Remember Me -->
+				<div class="flex items-center justify-between">
+					<FormCheckbox
+						id="remember-me"
+						name="remember-me"
+						label="Remember me"
+						bind:checked={$rememberMe$}
+						variant="primary"
+					/>
+				</div>
+
+				<!-- Submit Button -->
+				<PrimaryButton
+					type="submit"
+					disabled={loading || !formValid}
+					{loading}
+					loadingText="Signing you in..."
+				>
+					<span class="icon-[heroicons--arrow-right-on-rectangle] mr-2 h-5 w-5" slot="icon"></span>
+					Sign in
+				</PrimaryButton>
 			</form>
+
+			<p slot="footer-content" class="mt-8 text-center text-xs leading-relaxed text-gray-500">
+				Protected by industry-standard encryption. <a
+					href="/security"
+					class="text-blue-600 underline hover:text-blue-700">Learn more</a
+				>
+			</p>
 		</AuthCard>
 	</LoginProvider>
 </PageWrapper>

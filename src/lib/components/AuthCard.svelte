@@ -9,7 +9,6 @@
 	export let linkText: string = '';
 	export let linkHref: string = '';
 	export let linkLabel: string = '';
-	export let footerContent: string = '';
 </script>
 
 <div
@@ -25,10 +24,7 @@
 		></div>
 	</div>
 
-	<div
-		class="relative z-10 w-full max-w-md"
-		in:fly={{ y: 20, duration: 600, easing: quintOut }}
-	>
+	<div class="relative z-10 w-full max-w-md" in:fly={{ y: 20, duration: 600, easing: quintOut }}>
 		<!-- Header -->
 		<div class="mb-8 text-center">
 			<div
@@ -58,10 +54,6 @@
 		</div>
 
 		<!-- Footer Content -->
-		{#if footerContent}
-			<div class="mt-8 text-center">
-				{@html footerContent}
-			</div>
-		{/if}
+		<slot name="footer-content" />
 	</div>
 </div>
