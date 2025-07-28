@@ -6,6 +6,7 @@
 	import { toast } from '$lib/toast/store';
 	import { quintOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
+	import PageWrapper from '$lib/components/PageWrapper.svelte';
 
 	// Form state
 	const useEmail$ = new SvelteSubject<boolean>(true);
@@ -116,15 +117,11 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Create Account - Todo Manager</title>
-	<meta
-		name="description"
-		content="Join Todo Manager - Create your account to start organizing your tasks efficiently"
-	/>
-</svelte:head>
-
-<RegisterProvider {onRegistered} let:loading let:errorMessage let:clearError let:register>
+<PageWrapper
+	title="Create Account - KitRPC"
+	description="Join KitRPC - Create your account to start building powerful tRPC applications"
+>
+	<RegisterProvider {onRegistered} let:loading let:errorMessage let:clearError let:register>
 	<div
 		class="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4"
 	>
@@ -452,4 +449,5 @@
 			</div>
 		</div>
 	</div>
-</RegisterProvider>
+	</RegisterProvider>
+</PageWrapper>

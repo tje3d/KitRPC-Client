@@ -4,6 +4,7 @@
 	import { authUser, isLoggedIn } from '$lib/flow/auth.flow';
 	import { subscribe } from '$lib/helpers/svelte-rxjs.helper';
 	import { fade, fly } from 'svelte/transition';
+	import PageWrapper from '$lib/components/PageWrapper.svelte';
 
 	// Subscribe to authentication state
 	subscribe(isLoggedIn, (loggedIn) => {
@@ -27,7 +28,11 @@
 	}
 </script>
 
-{#if $isLoggedIn && $authUser}
+<PageWrapper
+	title="Dashboard - KitRPC"
+	description="Your KitRPC dashboard - Manage your tRPC applications and APIs"
+>
+	{#if $isLoggedIn && $authUser}
 	<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
 		<div class="container mx-auto px-4 py-12">
 			<!-- Welcome Header -->
@@ -202,4 +207,5 @@
 			</div>
 		</div>
 	</div>
-{/if}
+	{/if}
+</PageWrapper>
