@@ -175,13 +175,33 @@ export function useForm<T extends object>(formConfig: FormConfig) {
 		return isEmpty;
 	};
 
+	const isValid = (formData: T) => {
+		for (const [field, config] of Object.entries(formConfig)) {
+			// Skip field validation if condition exists and is not met
+			if (config.condition && !config.condition(formData)) {
+				continue;
+			}
+
+			for (const rule of config.rules) {
+				const valid = rule.validate(formData[field as keyof T], formData);
+				if (!valid) {
+					return false;
+				}
+			}
+		}
+
+		return true;
+	};
+
 	const reset = () => {
 		errors.next(null);
+		firstError.next(null);
 	};
 
 	return {
 		errors,
 		validate,
+		isValid,
 		reset,
 		firstError
 	};
