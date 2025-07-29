@@ -23,10 +23,12 @@ declare global {
 		}
 
 		// Dialog
-		interface DialogConfig {
+		interface DialogConfig<T = any> {
 			id: string;
-			component: any;
-			props?: Record<string, any>;
+			component: T;
+			props?: T extends import('svelte').ComponentType<infer C>
+				? import('svelte').ComponentProps<C>
+				: Record<string, any>;
 			onClose?: () => void;
 			preventBackdropClose?: boolean;
 			preventDirtyClose?: boolean;

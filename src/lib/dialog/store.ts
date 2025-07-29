@@ -20,7 +20,10 @@ const FULLSCREEN_CONFIG: Partial<App.DialogConfig> = {
 function createDialogStore() {
 	const { subscribe, update } = writable<App.DialogState>({ dialogs: [] });
 
-	const addDialog = (config: Omit<App.DialogConfig, 'id'>, defaults: Partial<App.DialogConfig>) => {
+	const addDialog = <T>(
+		config: Omit<App.DialogConfig<T>, 'id'>,
+		defaults: Partial<App.DialogConfig>
+	) => {
 		const dialogId = generateId();
 		update((state) => ({
 			dialogs: [...state.dialogs, { ...defaults, ...config, id: dialogId }]
@@ -30,8 +33,9 @@ function createDialogStore() {
 
 	return {
 		subscribe,
-		open: (config: Omit<App.DialogConfig, 'id'>) => addDialog(config, DEFAULT_CONFIG),
-		openFullScreen: (config: Omit<App.DialogConfig, 'id'>) => addDialog(config, FULLSCREEN_CONFIG),
+		open: <T>(config: Omit<App.DialogConfig<T>, 'id'>) => addDialog<T>(config, DEFAULT_CONFIG),
+		openFullScreen: <T>(config: Omit<App.DialogConfig<T>, 'id'>) =>
+			addDialog<T>(config, FULLSCREEN_CONFIG),
 		close: (id: string) => {
 			update((state) => {
 				const dialog = state.dialogs.find((d) => d.id === id);
