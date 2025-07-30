@@ -172,10 +172,10 @@ trpc.todos.delete.mutate({ id: 'todo-id' });
 
 ```typescript
 type Todo = {
-	id: string;
-	text: string;
-	completed: boolean;
-	createdAt: string;
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: string;
 };
 ```
 

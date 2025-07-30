@@ -1,9 +1,9 @@
 export function Focus(node: HTMLInputElement) {
-	node.focus();
+  node.focus();
 
-	return {
-		destroy() {
-			// Cleanup if needed
-		}
-	};
+  return {
+    destroy() {
+      // Cleanup if needed
+    }
+  };
 }

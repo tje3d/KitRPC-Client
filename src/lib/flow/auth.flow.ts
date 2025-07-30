@@ -14,48 +14,48 @@ export const ready = new SvelteSubject<boolean>(false);
 
 // Initialization
 export const initAuthFlow = new Observable<boolean>((observer) => {
-	const subs: Array<{ unsubscribe: () => void }> = [];
+  const subs: Array<{ unsubscribe: () => void }> = [];
 
-	// subs.push(
-	//   networkErrors$.subscribe((r) => {
-	//     if (r instanceof AjaxError) {
-	//       if (r.status === 401 && !r.request.url.endsWith('user/login')) {
-	//         logoutLocal()
-	//       }
-	//     }
-	//   }),
-	// )
+  // subs.push(
+  //   networkErrors$.subscribe((r) => {
+  //     if (r instanceof AjaxError) {
+  //       if (r.status === 401 && !r.request.url.endsWith('user/login')) {
+  //         logoutLocal()
+  //       }
+  //     }
+  //   }),
+  // )
 
-	// Set ready state
-	ready.next(true);
-	!observer.closed && observer.next(true);
+  // Set ready state
+  ready.next(true);
+  !observer.closed && observer.next(true);
 
-	return () => {
-		subs.forEach((sub) => sub.unsubscribe());
-	};
+  return () => {
+    subs.forEach((sub) => sub.unsubscribe());
+  };
 });
 
 // Methods
 export const logoutLocal = () => {
-	setAuthUser(undefined);
-	setIsLoggedIn(false);
+  setAuthUser(undefined);
+  setIsLoggedIn(false);
 
-	const keysToKeep = ['uniqId', 'manual_logout'];
-	const savedValues: Record<string, string | null> = {};
+  const keysToKeep = ['uniqId', 'manual_logout'];
+  const savedValues: Record<string, string | null> = {};
 
-	keysToKeep.forEach((key) => {
-		savedValues[key] = localStorage.getItem(key);
-	});
+  keysToKeep.forEach((key) => {
+    savedValues[key] = localStorage.getItem(key);
+  });
 
-	localStorage.clear();
+  localStorage.clear();
 
-	Object.entries(savedValues).forEach(([key, value]) => {
-		if (value !== null) {
-			localStorage.setItem(key, value);
-		}
-	});
+  Object.entries(savedValues).forEach(([key, value]) => {
+    if (value !== null) {
+      localStorage.setItem(key, value);
+    }
+  });
 };
 
 export const getTokenValue = () => {
-	return null;
+  return null;
 };

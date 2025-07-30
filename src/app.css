@@ -6,11 +6,13 @@ input,
 button,
 textarea,
 select {
-	@apply focus:outline-none;
+  @apply focus:outline-none;
 }
 
-button, [type="button"], [role="button"] {
-	cursor: pointer;
+button,
+[type='button'],
+[role='button'] {
+  cursor: pointer;
 }
 
 a,
@@ -18,5 +20,5 @@ button,
 label,
 [role='button'],
 input {
-	touch-action: manipulation;
+  touch-action: manipulation;
 }

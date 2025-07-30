@@ -1,26 +1,26 @@
 <script lang="ts">
-	import { subscribe } from '$lib/helpers/svelte-rxjs.helper';
-	import { ApiService, useRequest } from '$lib/helpers/useRequest.helper';
-	import type { AjaxResponse } from 'rxjs/ajax';
+  import { subscribe } from '$lib/helpers/svelte-rxjs.helper';
+  import { ApiService, useRequest } from '$lib/helpers/useRequest.helper';
+  import type { AjaxResponse } from 'rxjs/ajax';
 
-	export let onLoggedOut: () => void;
+  export let onLoggedOut: () => void;
 
-	const { clearError, errorMessage, loading, trigger, responseSuccess } = useRequest<
-		void,
-		AjaxResponse<any>
-	>((body) => ApiService.post<any>('/v1/logout', body), {
-		validateResponse: (r) => !!r?.response?.success
-	});
+  const { clearError, errorMessage, loading, trigger, responseSuccess } = useRequest<
+    void,
+    AjaxResponse<any>
+  >((body) => ApiService.post<any>('/v1/logout', body), {
+    validateResponse: (r) => !!r?.response?.success
+  });
 
-	subscribe(responseSuccess, (result) => {
-		if (!result) return;
+  subscribe(responseSuccess, (result) => {
+    if (!result) return;
 
-		onLoggedOut();
-	});
+    onLoggedOut();
+  });
 
-	function logout() {
-		trigger.next();
-	}
+  function logout() {
+    trigger.next();
+  }
 </script>
 
 <slot loading={$loading} errorMessage={$errorMessage} {clearError} {logout} />
