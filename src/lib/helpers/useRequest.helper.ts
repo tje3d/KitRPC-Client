@@ -24,8 +24,13 @@ import {
 import { AjaxError, AjaxResponse, ajax } from 'rxjs/ajax';
 
 // ─── Types and Interfaces ─────────────────────────────────────────────────────
-
 export type RequestFunction<TParams, TResponse> = (params: TParams) => Observable<TResponse>;
+
+// Type alias for API responses that can be undefined
+export type ApiResponse<T = any> = AjaxResponse<T | undefined>;
+
+// Type alias for API responses with guaranteed response data
+export type ApiResponseWithData<T = any> = AjaxResponse<T> & { response: T };
 
 const SUCCESS_STATUS_CODES = [200, 201, 202, 203, 204, 205, 206, 207, 208, 226] as const;
 
@@ -55,12 +60,10 @@ interface ApiOptions {
 }
 
 // ─── Global Subjects ──────────────────────────────────────────────────────────
-
 export const networkErrors$ = new Subject<any>();
 export const apiResponses$ = new Subject<any>();
 
 // ─── Error Handling Utilities ────────────────────────────────────────────────
-
 function isRetriableError(error: any): boolean {
   return error?.status === 0 || (error?.status >= 500 && error?.status < 600);
 }
@@ -84,7 +87,6 @@ function retryOnRetriable<T>(count: number, delay: number, maxDelay: number) {
 }
 
 // ─── Base Configuration ──────────────────────────────────────────────────────
-
 function getBaseConfig(input: string | Request) {
   const inputStr = typeof input === 'string' ? input : input.url;
   const url =
@@ -103,11 +105,7 @@ function getBaseConfig(input: string | Request) {
 }
 
 // ─── API Service Class ───────────────────────────────────────────────────────
-
 export class ApiService {
-  /**
-   * Makes a GET request to the specified endpoint
-   */
   static get<T>(input: string | Request, queryParams?: Record<string, any>) {
     const { url, headers } = getBaseConfig(input);
     return ajax<T>({
@@ -123,9 +121,6 @@ export class ApiService {
     }).pipe(shareIt());
   }
 
-  /**
-   * Makes a POST request to the specified endpoint
-   */
   static post<T>(input: string | Request, body?: any, options: ApiOptions = {}) {
     const { url, headers } = getBaseConfig(input);
 
@@ -147,9 +142,6 @@ export class ApiService {
     }).pipe(shareIt());
   }
 
-  /**
-   * Uploads a file to the specified endpoint
-   */
   static upload<T>(
     input: string | Request,
     file: File,
@@ -163,23 +155,25 @@ export class ApiService {
     });
   }
 
-  /**
-   * Makes a DELETE request to the specified endpoint
-   */
   static delete<T>(input: string | Request, body?: any, options: ApiOptions = {}) {
     return ApiService.post<T>(input, body, { ...options, method: 'DELETE' });
+  }
+
+  static patch<T>(input: string | Request, body?: any, options: ApiOptions = {}) {
+    return ApiService.post<T>(input, body, { ...options, method: 'PATCH' });
   }
 }
 
 // ─── Request Wrapper Class ───────────────────────────────────────
-
 export class RequestWrap<TParams, TResponse extends AjaxResponse<any>> {
   readonly loading = new SvelteSubject<boolean>(false);
   readonly trigger = new Subject<TParams>();
   readonly response$: Observable<TResponse | undefined>;
   readonly errorMessage: Observable<string | undefined>;
   readonly error$: Observable<AjaxError | undefined>;
-  readonly responseSuccess: Observable<TResponse | undefined>;
+  readonly responseSuccess: Observable<
+    TResponse & { response: NonNullable<TResponse['response']> }
+  >;
 
   private readonly clearErrorSubject = new Subject<undefined>();
 
@@ -242,21 +236,13 @@ export class RequestWrap<TParams, TResponse extends AjaxResponse<any>> {
     this.error$ = this.setupErrorObjectStream();
   }
 
-  // ─── Public Methods ────────────────────────────────────────────────────────
-
   request = (params: TParams) => {
     this.trigger.next(params);
   };
 
-  /**
-   * Clears any existing error state by emitting undefined to the response stream
-   * This will reset both errorMessage and error$ observables
-   */
   clearError = () => {
     this.clearErrorSubject.next(undefined);
   };
-
-  // ─── Stream Setup Methods ──────────────────────────────────────────────────
 
   private createRequestTrigger(
     initialData: any,
@@ -343,7 +329,7 @@ export class RequestWrap<TParams, TResponse extends AjaxResponse<any>> {
     successStatusCodes: readonly number[],
     validateResponse?: (r: TResponse) => boolean,
     extractErrorMessage?: (r: TResponse) => string | undefined
-  ): Observable<TResponse | undefined> {
+  ): Observable<TResponse & { response: NonNullable<TResponse['response']> }> {
     return this.response$.pipe(
       map((r) => {
         if (!r || r instanceof AjaxError) return undefined;
@@ -359,6 +345,10 @@ export class RequestWrap<TParams, TResponse extends AjaxResponse<any>> {
 
         return r;
       }),
+      filter(
+        (r): r is TResponse & { response: NonNullable<TResponse['response']> } =>
+          !!(r && r.response)
+      ),
       shareIt()
     );
   }
@@ -428,8 +418,6 @@ export class RequestWrap<TParams, TResponse extends AjaxResponse<any>> {
     );
   }
 
-  // ─── Caching Methods ───────────────────────────────────────────────────────
-
   private applyCaching(
     source$: Observable<TResponse>,
     localStorageKey?: string
@@ -471,8 +459,6 @@ export class RequestWrap<TParams, TResponse extends AjaxResponse<any>> {
     return cachedData ?? undefined;
   }
 
-  // ─── Error Handling Methods ────────────────────────────────────────────────
-
   private extractErrorMessage(error: AjaxError): string | undefined {
     // Check for message in response
     if (error.response?.message) {
@@ -494,7 +480,56 @@ export class RequestWrap<TParams, TResponse extends AjaxResponse<any>> {
   }
 }
 
-// ─── Helper Functions ─────────────────────────────────────────────────────────
+// ─── Clean API Hooks ──────────────────────────────────────────────────────────
+export function useApiPost<TBody = any, TResponse = any>(
+  endpoint: string,
+  options: RequestWrapOptions<ApiResponse<TResponse>> = {}
+) {
+  return useRequest<TBody, ApiResponse<TResponse>>(
+    (body) => ApiService.post(endpoint, body),
+    options
+  );
+}
+
+export function useApiGet<
+  TParams extends Record<string, any> | undefined = Record<string, any> | undefined,
+  TResponse = any
+>(endpoint: string, options: RequestWrapOptions<ApiResponse<TResponse>> = {}) {
+  return useRequest<TParams, ApiResponse<TResponse>>(
+    (params) => ApiService.get(endpoint, params),
+    options
+  );
+}
+
+export function useApiPatch<TBody = any, TResponse = any>(
+  endpoint: string,
+  options: RequestWrapOptions<ApiResponse<TResponse>> = {}
+) {
+  return useRequest<TBody, ApiResponse<TResponse>>(
+    (body) => ApiService.patch(endpoint, body),
+    options
+  );
+}
+
+export function useApiDelete<TBody = any, TResponse = any>(
+  endpoint: string,
+  options: RequestWrapOptions<ApiResponse<TResponse>> = {}
+) {
+  return useRequest<TBody, ApiResponse<TResponse>>(
+    (body) => ApiService.delete(endpoint, body),
+    options
+  );
+}
+
+export function useApiUpload<TResponse = any>(
+  endpoint: string,
+  options: RequestWrapOptions<ApiResponse<TResponse>> = {}
+) {
+  return useRequest<File, ApiResponse<TResponse>>(
+    (file) => ApiService.upload(endpoint, file),
+    options
+  );
+}
 
 /**
  * Creates a new RequestWrap instance for managing API requests
@@ -502,6 +537,7 @@ export class RequestWrap<TParams, TResponse extends AjaxResponse<any>> {
  * @param options - Configuration options for the request wrapper
  * @returns A new RequestWrap instance
  */
+// ─── Helper Functions ─────────────────────────────────────────────────────────
 export function useRequest<TParams, TResponse extends AjaxResponse<any>>(
   requestFn: RequestFunction<TParams, TResponse>,
   options: RequestWrapOptions<TResponse> = {}

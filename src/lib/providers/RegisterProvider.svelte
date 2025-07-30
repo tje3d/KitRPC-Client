@@ -1,24 +1,33 @@
 <script lang="ts">
   import { subscribe } from '$lib/helpers/svelte-rxjs.helper';
-  import { ApiService, useRequest } from '$lib/helpers/useRequest.helper';
-  import type { AjaxResponse } from 'rxjs/ajax';
+  import { useApiPost } from '$lib/helpers/useRequest.helper';
+
+  interface RegisterRequest {
+    email?: string;
+    mobile?: string;
+    password: string;
+  }
+
+  interface RegisterResponse {
+    user: App.AuthUser;
+    token: string;
+    success: boolean;
+  }
 
   export let onRegistered: (user: App.AuthUser, token: string) => void;
 
-  const { clearError, errorMessage, loading, request, responseSuccess } = useRequest<
-    { email?: string; mobile?: string; password: string },
-    AjaxResponse<{ user: App.AuthUser; token: string; success: boolean }>
-  >((body) => ApiService.post('/v1/user/register', body), {
+  const { clearError, errorMessage, loading, request, responseSuccess } = useApiPost<
+    RegisterRequest,
+    RegisterResponse
+  >('/v1/user/register', {
     validateResponse: (r) => !!r?.response?.success
   });
 
-  subscribe(responseSuccess, (result) => {
-    if (!result) return;
-
-    onRegistered(result.response.user, result.response.token);
+  subscribe(responseSuccess, (r) => {
+    onRegistered(r.response.user, r.response.token);
   });
 
-  function register(input: { email?: string; mobile?: string; password: string }) {
+  function register(input: RegisterRequest) {
     request(input);
   }
 </script>

@@ -1,25 +1,22 @@
 <script lang="ts">
   import { subscribe } from '$lib/helpers/svelte-rxjs.helper';
-  import { ApiService, useRequest } from '$lib/helpers/useRequest.helper';
-  import type { AjaxResponse } from 'rxjs/ajax';
+  import { useApiPost } from '$lib/helpers/useRequest.helper';
 
   export let onLoggedOut: () => void;
 
-  const { clearError, errorMessage, loading, trigger, responseSuccess } = useRequest<
-    void,
-    AjaxResponse<any>
-  >((body) => ApiService.post<any>('/v1/logout', body), {
+  const { clearError, errorMessage, loading, request, responseSuccess } = useApiPost<
+    undefined,
+    { success: boolean }
+  >('/v1/logout', {
     validateResponse: (r) => !!r?.response?.success
   });
 
-  subscribe(responseSuccess, (result) => {
-    if (!result) return;
-
+  subscribe(responseSuccess, () => {
     onLoggedOut();
   });
 
   function logout() {
-    trigger.next();
+    request(undefined);
   }
 </script>
 
